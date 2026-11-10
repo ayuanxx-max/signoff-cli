@@ -11,7 +11,7 @@
 
 | 平台 / agent | 入口 | 数据来自 | 前置 |
 | --- | --- | --- | --- |
-| DSH（本机） | 侧栏「SignOff 看板」面板 | `~/.signoff/reports/index.json` 与 `<仓库>/report.json` | 仓库里跑过一次 `--mount` |
+| DSH（本机） | 侧栏导航第 4 行「SignOff 看板」（插件 / 自动化任务 / **SignOff 看板** / 更多），数据走 `/signoff-board/state` | `~/.signoff/reports/index.json` 与 `<仓库>/report.json` | 仓库里跑过一次 `--mount` |
 | MCP 客户端（Claude Desktop、Cursor、Codex 等） | 调用 `signoff_report` | 同一条 CLI | 客户端里登记 `signoff mcp` |
 | 终端 / 脚本 | `signoff report --json` | `.signoff/*.json` + `.signoff/audit.log` + git | 无 |
 | 浏览器 / 存档 / 分享 | `signoff report --html --mount`，页面是单文件 | 同上 | 一个浏览器 |
