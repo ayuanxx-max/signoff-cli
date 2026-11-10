@@ -1270,6 +1270,7 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       check("report --json is machine readable", !!(parsed && Array.isArray(parsed.gates)), true);
       check("report --json keeps seven checks", parsed.gates.length, 7);
       check("seven checks include release", parsed.gates.some((g) => g.id === "release"), true);
+      check("release checks the manifests", /清单/.test((parsed.gates.find((g) => g.id === "release") || {}).detail || ""), true);
       check("report --json carries events", Array.isArray(parsed.events), true);
       check("report --json carries tasks", Array.isArray(parsed.tasks), true);
       check("report --json carries a verdict", ["blocked", "ready", "unknown"].includes(parsed.verdict), true);
