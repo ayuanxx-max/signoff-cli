@@ -1,3 +1,30 @@
+## 4.2.1
+
+**修一个只在 macOS 上现身的截断：大的 `--json` 输出会丢尾巴。**
+
+- `lib/out.js`：用 `fs.writeSync(1, …)` 分块写完再返回，不再用 `process.stdout.write` 之后立刻退出。
+  macOS / Linux 的管道每次约 64 KB，进程退出不等管道排空，`signoff report --json | …` 可能收到半份文档——
+  4.2.0 的 CI 就在 `macos-latest, node 20` 上报 `SyntaxError: Unexpected end of JSON input`。
+  Windows 的管道是同步写的，本机看不出来。
+- `report --json` 与 `report --contract` 改走这条写路径；其余小输出不动。
+- 自测加两项：40 万字符的文档必须完整到达读取方；写完之后的退出码不受影响（`--gate p9` 仍是 2）。
+- 看板本体（页面 / DSH 侧栏面板 / MCP）在下一条 4.2.0 里，4.2.1 是首个在这条上干净通过的版本。
+
+### English
+
+**Fix a truncation that only showed up on macOS: a large `--json` document could lose its tail.**
+
+- `lib/out.js` writes through `fs.writeSync(1, …)` in chunks and returns only after the reader has taken them,
+  replacing `process.stdout.write` followed by an immediate exit. A macOS / Linux pipe takes about 64 KB per
+  write and the process does not wait for it to drain, so `signoff report --json | …` could arrive cut in half —
+  the `SyntaxError: Unexpected end of JSON input` that 4.2.0 hit on `macos-latest, node 20`. Windows writes
+  pipes synchronously, which is why the machine that built it never saw this.
+- `report --json` and `report --contract` use that path; small outputs are untouched.
+- Two self-tests: a 400 KB document must arrive whole, and writing it must not change the exit code
+  (`--gate p9` still exits 2).
+- The boards themselves (page, DSH panel, MCP) are in the 4.2.0 entry below; 4.2.1 is the first version that
+  passes everywhere.
+
 ## 4.2.0
 
 **新增 `signoff report`：一页只读看板（能不能发 + 月历 + 按任务），数据全在本地算。**

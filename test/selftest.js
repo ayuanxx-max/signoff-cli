@@ -25,6 +25,8 @@ function run(args, cwd, env) {
   return spawnSync(process.execPath, [CLI, ...args], {
     cwd,
     encoding: "utf8",
+    // A report for a busy repo is far bigger than the 1 MB spawnSync default.
+    maxBuffer: 64 * 1024 * 1024,
     // Fixtures are not the user's repos: no auto-install unless a test asks for it.
     env: { ...process.env, SIGNOFF_HOME: HOME, SIGNOFF_NO_BOOTSTRAP: "1", ...(env || {}) },
   });
@@ -1392,6 +1394,17 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("--contract exits 0", printed.status, 0, (printed.stderr || "").slice(0, 80));
     check("--contract prints the file", printed.stdout.trim() === contract.trim(), true);
     check("--contract works outside a repo", run(["report", "--contract"], os.tmpdir()).status, 0);
+  }
+
+  // lib/out.js: a document larger than a pipe buffer must arrive whole. Before this
+  // helper the tail of a big --json report could be lost when the process exited
+  // straight after writing (macos-latest, node 20).
+  {
+    const bigSrc =
+      'require(' + JSON.stringify(path.join(__dirname, "..", "lib", "out.js")) + ').write("x".repeat(400000));';
+    const big = spawnSync(process.execPath, ["-e", bigSrc], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
+    check("a large document reaches the reader", big.stdout.length, 400000);
+    check("the writer leaves the exit code alone", run(["report", "--gate", "p9"], os.tmpdir()).status, 2);
   }
 
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);
