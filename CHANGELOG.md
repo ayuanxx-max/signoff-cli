@@ -1,3 +1,28 @@
+## 4.2.3
+
+**`release --post` 不再把同一个仓库的两种写法判成两个仓库。**
+
+- `lib/release.js`：`server-repo` 改成按「目标」比较（去 `git+` 前缀、`.git` 后缀、尾部斜杠，忽略大小写）。
+  以前 npm 把 `package.json` 规范成 `git+https://….git`、而 `server.json` 写给人看的 `https://…`，
+  一条完全正常的发布也会被判 FAIL。
+- 顺带把 npm 发布时规范化的 `package.json`（`repository.type` 与 `git+…git` 写法）收进仓库，
+  以后发布不再留下工作区改动。
+- 自测 +2（两种写法算同一个仓库、不同仓库仍然不同）：`npm test` 406 passed / 0 failed，
+  `signoff release --post` 17/17。
+
+### English
+
+**`release --post` no longer mistakes one repository for two.**
+
+- `lib/release.js`: `server-repo` now compares targets rather than spellings — it drops a leading `git+`,
+  a trailing `.git` and any trailing slash, and ignores case. npm normalises `package.json` to
+  `git+https://….git` while `server.json` carries the human form `https://…`, and that mismatch used to
+  fail a perfectly good release.
+- The `package.json` that npm normalises during publish (`repository.type`, the `git+…git` form) is now
+  committed, so a publish no longer leaves the working tree dirty.
+- Two new self-tests (the two spellings are one repo, different repos still differ): `npm test`
+  406 passed / 0 failed, `signoff release --post` 17/17.
+
 ## 4.2.2
 
 **判定不再说「能不能发」，直接说哪几项没过；p2 那片红也一并修掉了。**

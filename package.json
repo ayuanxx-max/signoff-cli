@@ -1,6 +1,6 @@
 {
   "name": "signoff-cli",
-  "version": "4.2.2",
+  "version": "4.2.3",
   "description": "SignOff (落印) — five gates that make an agent's \"done\" provable: verify, coverage, queue, ledger, anti-slop.",
   "publishConfig": {
     "access": "public"
@@ -51,7 +51,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ayuanxx-max/signoff-cli"
+    "url": "git+https://github.com/ayuanxx-max/signoff-cli.git"
   },
   "mcpName": "io.github.ayuanxx-max/signoff-cli"
 }

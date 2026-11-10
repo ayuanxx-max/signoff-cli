@@ -1433,6 +1433,13 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("scenario cards measure real coverage", claims.length >= 20, true, `${claims.length} checks`);
   }
 
+  // 同一个仓库的两种写法不能被判成两个仓库：npm 规范成 git+https://….git，server.json 写 https://…。
+  {
+    const rel = require(path.join(__dirname, "..", "lib", "release.js"));
+    check("repo urls compare by target, not spelling", rel.sameRepo("git+https://github.com/a/b.git", "https://github.com/a/b/"), true);
+    check("different repos still differ", rel.sameRepo("https://github.com/a/b", "https://github.com/a/c"), false);
+  }
+
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);
   for (const line of PASS) console.log(`PASS ${line}`);
   for (const line of FAIL) console.log(`FAIL ${line}`);
