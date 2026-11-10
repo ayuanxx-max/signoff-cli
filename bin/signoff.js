@@ -57,6 +57,8 @@ const HELP = `SignOff / 落印 — make "done" provable
                                              (--global = guard every repo on this machine)
   signoff guard [--full]                     run the gate set the hooks use (right now)
   signoff status                             is this repo guarded?
+  signoff report [--html] [--out FILE]       one read-only page about the five gates
+  signoff report --json                      the same data, for scripts
 signoff doctor [--json] [--fix]            why is (or isn't) it guarded? --fix repairs it
   signoff secrets [--staged|--all] [--json]   scan staged files for leaked credentials
   signoff cov [--diff] [--min 80] [--json]   how much of this change the suite executed\n  signoff init --preset node|python|go|java   start from a curated gate config\n  signoff init --editor vscode               .vscode/tasks.json + problem matchers
@@ -182,6 +184,9 @@ if (cmd === "guard") {
 }
 if (cmd === "hook") process.exit(guard("hook", rest));
 if (cmd === "status") process.exit(guard("status", rest));
+// Read-only by construction: `report` is deliberately absent from BOOTSTRAP_CMDS and
+// from the gate table, so looking at the state can never change it.
+if (cmd === "report") process.exit(require("../lib/report.js").run(rest));
 if (cmd === "uninstall") {
   if (rest.includes("--global")) {
     const r = require("../lib/bootstrap").uninstallGlobal();

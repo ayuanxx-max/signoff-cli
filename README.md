@@ -132,7 +132,35 @@ signoff p4 export --format json --out ledger.json       # 也可以导出 json /
 signoff explain p2           # 这一关到底查什么、怎么判的
 signoff secrets              # 只扫暂存区的密钥泄露（钩子里自动先跑）
 signoff secrets --all --json # 全仓库扫一遍，一条 JSON 判决
+signoff report --html        # 一页只读的状态页 + 时间线：五关结果、过闸历史、按任务切分
+signoff report --days 90     # 只看最近 90 天
+signoff report --since 2026-11-01 --until 2026-11-10
+signoff report --task release      # 只看某个任务：任务卡 id、提交范围、sha 前缀或标题关键词
+signoff report --gate p2 --json    # 只看 P2，机器可读
 ```
+
+### 看现状：一页只读报告 + 时间线
+
+`signoff report --html` 回答两个问题：**现在什么状态**、**过去这些天发生了什么、哪件事过的闸**。
+默认写到 `.signoff/report.html`（该目录已在 gitignore 里），`--out` 指定别处，`--json` 给脚本。
+
+页面分五块：
+
+| 块 | 内容 |
+| --- | --- |
+| 五关现状 | 每关上次结果、本机时间、依据（cases / apps / cards / ledger / hits）、怎么修 |
+| 时间线 | 按天分组：每条提交（是否带 `Signoff-Pass:`）、P4 票据（allow/deny + 回滚点）、安装点与最近一次跑闸 |
+| 按任务 | 有 `tasks/<id>/card.json` 就按卡分组并列出其 scope 内提交；没有就按提交范围（`feat(report)` → `report`）自动切分 |
+| 守卫状态 | 钩子 / CI / trailer / 机器层 / 测试命令 / 预算 / HEAD |
+| 红线 | 三条红线的说明，`--no-verify` 与 `SIGNOFF_SKIP=1` 不会让页面出现“通过” |
+
+「无标记」这一列只对**安装点之后**的提交计数：带了 `Signoff-Pass:` 是过闸，带 `Signoff-Skip:` 是显式跳过，
+两者都没有就是 `--no-verify` 的形状。查询全部靠参数（`--days / --since / --until / --task / --gate / --group / --limit`），
+页面里没有任何按钮。
+
+这一页**没有**任何能通过、跳过或放宽闸门的控件——那正是三条红线（`--no-verify`、`SIGNOFF_SKIP=1`、
+调阈值让红变绿）最容易被悄悄破掉的地方。数据只来自 `.signoff/*.json` 与 `git`，跑它不执行任何关，
+也不联网。
 
 ### 密钥扫描与提速（3.12.0 起）
 
