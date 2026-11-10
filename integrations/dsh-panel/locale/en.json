@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "SignOff board",
+    "description": "See whether each repository can ship: verdict, blockers with fixes, pass rate. Read-only."
+  }
+}

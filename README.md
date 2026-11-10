@@ -318,6 +318,29 @@ secrets → p5 → p1 → p2 → p4 → cov（opt-in）→ 判决 → 四层证�
 - **收尾**：P5 的六条规则让“完成”这句话可以被机器反驳：无数字的`已验证`、`TODO`、`绝对`化断言、AI 味词表（`赋能` / `闭环` / `抓手`…），命中即失败。
 - **插件回归**：`verify/scenarios/*.json` 是 P2 的输入格式，把 fixture 的 checks 数量直接变成覆盖率数字，不需要另写报表。
 
+## 看板：一个核心，多个薄壳
+
+判定只在 `lib/` 里算一次，看板只负责画。三个能「看」的落点：
+
+| 落点 | 怎么开 | 数据从哪来 |
+| --- | --- | --- |
+| 单文件页面 | `signoff report --html --mount`，再打开 `~/.signoff/reports/index.html` | 该目录里的 `index.json` 与每仓 `report.json` |
+| DSH 侧栏面板 | 侧栏导航第 4 行「SignOff 看板」（`integrations/dsh-panel/`） | 同一个挂载目录，只读 |
+| MCP | `signoff mcp` 的 `signoff_report` 工具 | 同一条命令行的输出 |
+
+`--mount` 只写自己的目录（默认 `~/.signoff/reports`，也可 `--mount DIR`），不碰被检查的仓库；
+索引里的链接都是相对路径，整个目录拷到别的机器照样能开；`--open` 用系统默认浏览器打开索引页。
+
+DSH 面板装法：
+
+1. profile 的 `package.json` 里加 `"@local/signoff-board": "link:<仓库>/integrations/dsh-panel"`；
+2. 在 `node_modules/@local/signoff-board` 建目录联接指向同一目录（Windows: `mklink /J`）；
+3. `cordis.patch.yml` 末尾加 `- insert: [{ id: signoff-board, name: '@local/signoff-board' }]`。
+
+面板只读：没有跑闸 / 跳过 / 改阈值的控件，唯一会写东西的按钮是把那张页面交给系统浏览器打开。
+为什么路由不能挂在 `/api` 下面、以及热重载时的重复路由，见 `integrations/dsh-panel/README.md`；
+各平台与各 agent 怎么接，见 `docs/SURFACES.md`（英文：`docs/SURFACES.en.md`）。
+
 ## 五、命令速查
 
 ```bash
@@ -643,6 +666,32 @@ Discovery and promotion notes: [docs/promotion.md](docs/promotion.md).
 14 checks); `--post` runs after publish and verifies npm `dist-tags.latest`, the MCP registry entry, and
 every README image URL. Its first run found that `files[]` omitted `integrations/`, so every installed
 copy since 3.9.3 had a `signoff mcp` that failed with `MODULE_NOT_FOUND`.
+
+### Boards: one core, several thin shells
+
+The verdict is computed once, in `lib/`; every board only draws it. Three places to look:
+
+| Surface | How to open it | Where the data comes from |
+| --- | --- | --- |
+| Single-file page | `signoff report --html --mount`, then open `~/.signoff/reports/index.html` | `index.json` plus each repository's `report.json` in that directory |
+| DSH sidebar panel | the fourth row of the sidebar navigation, "SignOff 看板" (`integrations/dsh-panel/`) | the same mount directory, read-only |
+| MCP | the `signoff_report` tool from `signoff mcp` | the same command line output |
+
+`--mount` writes only its own directory (default `~/.signoff/reports`, or `--mount DIR`), never the repository
+under test. Links in the index are relative, so the directory survives being copied to another machine, and
+`--open` hands the index page to the system browser.
+
+Installing the DSH panel takes three steps:
+
+1. add `"@local/signoff-board": "link:<repo>/integrations/dsh-panel"` to the profile's `package.json`;
+2. create a directory junction at `node_modules/@local/signoff-board` pointing at the same directory
+   (Windows: `mklink /J`);
+3. append `- insert: [{ id: signoff-board, name: '@local/signoff-board' }]` to `cordis.patch.yml`.
+
+The panel is read-only: no control runs a gate, skips one, or relaxes a threshold; the only button that changes
+anything hands the page to the system browser. Why the route cannot live under `/api`, and what a hot reload does
+to a duplicate route, are in `integrations/dsh-panel/README.md`. The surface matrix for other platforms and agents
+is in `docs/SURFACES.md` (English: `docs/SURFACES.en.md`).
 
 ## License
 

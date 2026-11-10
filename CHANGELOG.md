@@ -1,4 +1,4 @@
-## 未发布
+## 4.2.0
 
 **新增 `signoff report`：一页只读看板（能不能发 + 月历 + 按任务），数据全在本地算。**
 
@@ -23,6 +23,38 @@
 - 查询靠参数：`--days / --since / --until / --task / --gate / --limit`；`--json` 给脚本。
 - 「无标记」只在安装点之后计数：带 `Signoff-Pass:` 是过闸，带 `Signoff-Skip:` 是显式跳过，都没有就是 `--no-verify` 的形状。
 - 离线单文件：内联 CSS、无外链；页内脚本只切换视图，不发请求；没有任何能通过 / 跳过 / 放宽某一关的控件。
+
+- 看板三处落点，判定只算一处：`--mount` 的单文件页面、DSH 侧栏面板、MCP 的 `signoff_report`；
+  三处读的是同一份数据，不会出现「面板说能发、页面说不能发」。
+- `integrations/dsh-panel/`（随包分发）——DSH 侧栏面板：侧栏导航第 4 行「SignOff 看板」，红底白勾图标；
+  点开是每个已挂载仓库的判定、阻塞项与修法、过闸率、提交数与任务组数、七项通过标记，
+  右上「打开完整页面」交给系统 opener 打开该仓 `latest.html`。
+- 面板数据走宿主的两个只读路由：`/signoff-board/state`（读 `~/.signoff/reports/index.json` 与各仓 `report.json`）
+  与 `/signoff-board/open`（校验 slug 后交给系统浏览器）。不探测工作区路径，所以不会认错仓库。
+- 面板只读：没有跑闸 / 跳过 / 改阈值的控件，与 `docs/REPORT-CONTRACT.md` 的 C2 是同一条线。
+- 两个踩坑写进 `integrations/dsh-panel/README.md`：桌面端在 `/api` 上有一个 prefix 网关会接走未注册子路径
+  （回 `not found`，浏览器里是 403），所以面板路由不能挂在 `/api` 下面；同进程重复注册同一 prefix 会抛
+  `duplicate prefix route`，热重载时要兜住。
+- `docs/SURFACES.en.md`：投递矩阵的英文对照（页面 / DSH 面板 / MCP / 终端 / CI / 编辑器）。
+
+### English
+
+- Three surfaces, one verdict: the single-file page from `--mount`, the DSH sidebar panel, and the
+  `signoff_report` MCP tool all read the same data, so a panel can never say "ready" while the page says "blocked".
+- `integrations/dsh-panel/` (shipped in the package) is the DSH sidebar panel: the fourth row of the sidebar
+  navigation, "SignOff 看板", with a red seal icon. It lists every mounted repository with its verdict,
+  blockers and the command that clears them, pass rate, commit and task-group counts, and the seven check marks;
+  "Open full page" hands the repository's `latest.html` to the system opener.
+- The host half serves two read-only routes: `/signoff-board/state` (reads `~/.signoff/reports/index.json` plus
+  each repository's `report.json`) and `/signoff-board/open` (validates the slug, then opens the page).
+  It never guesses a workspace path, so it cannot point at the wrong repository.
+- Read-only by construction: no control can run a gate, skip one, or relax a threshold — the same line as C2 in
+  `docs/REPORT-CONTRACT.md`.
+- Two traps are documented in `integrations/dsh-panel/README.md`: the desktop build registers a prefix route on
+  `/api` that answers `not found` for anything it does not know (browsers get 403), so the panel route must live
+  outside `/api`; and registering the same prefix twice in one process throws `duplicate prefix route`, which a
+  hot reload has to tolerate.
+- `docs/SURFACES.en.md`: the English counterpart of the delivery matrix (page, DSH panel, MCP, terminal, CI, editor).
 
 ## 4.1.10
 
