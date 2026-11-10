@@ -57,8 +57,10 @@ const HELP = `SignOff / 落印 — make "done" provable
                                              (--global = guard every repo on this machine)
   signoff guard [--full]                     run the gate set the hooks use (right now)
   signoff status                             is this repo guarded?
-  signoff report [--html] [--out FILE]       one read-only page about the five gates
+  signoff report [--html] [--out FILE]       one read-only page: can I ship, what happened
   signoff report --json                      the same data, for scripts
+  signoff report --repos a,b / --scan DIR    one page over several repositories
+  signoff report --would-block               read-only preview: what would block a commit now
 signoff doctor [--json] [--fix]            why is (or isn't) it guarded? --fix repairs it
   signoff secrets [--staged|--all] [--json]   scan staged files for leaked credentials
   signoff cov [--diff] [--min 80] [--json]   how much of this change the suite executed\n  signoff init --preset node|python|go|java   start from a curated gate config\n  signoff init --editor vscode               .vscode/tasks.json + problem matchers

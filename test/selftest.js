@@ -1316,6 +1316,25 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       check("--task really filters", JSON.parse(run(["report", "--json", "--task", "zzz-nothing"], repo).stdout).events.length, 0);
 
       const hd = run(["report", "-h"], repo);
+      // trend / heat / task rate / would-block / multi-repo
+      check("page shows the run trend", /跑闸趋势/.test(html), true);
+      check("trend covers every gate", (parsed.trend || []).length, 7);
+      check("trend rows carry a series", (parsed.trend || []).every((x) => Array.isArray(x.series)), true);
+      check("tasks carry a pass rate", (parsed.tasks || []).every((x) => x.rate === null || typeof x.rate === "number"), true);
+      check("heat zones are listed", Array.isArray(parsed.heat), true);
+      check("riskiest groups are listed", Array.isArray(parsed.riskiest), true);
+      const wb = JSON.parse(run(["report", "--json", "--would-block"], repo).stdout);
+      check("--would-block judges secrets", !!(wb.wouldBlock.gates || []).find((g) => g.gate === "secrets"), true);
+      check("--would-block judges docs", !!(wb.wouldBlock.gates || []).find((g) => g.gate === "p5"), true);
+      check("--would-block names what still needs a real run", (wb.wouldBlock.untested || []).length, 3);
+      const wbRun = run(["report", "--html", "--would-block"], repo);
+      check("--would-block renders", wbRun.status, 0);
+      check("preview section lands in the page", /如果现在提交/.test(fs.readFileSync(path.join(repo, ".signoff", "report.html"), "utf8")), true);
+      const multi = JSON.parse(run(["report", "--json", "--repos", repo], repo).stdout);
+      check("--repos collects repositories", multi.multi, true);
+      check("--repos keeps one entry", (multi.repos || []).length, 1);
+      check("--repos entries carry a verdict", ["blocked", "ready", "unknown"].includes((multi.repos[0] || {}).verdict), true);
+
       check("report -h exits 0", hd.status, 0);
       check("report -h names the flags", /--html/.test(hd.stdout) && /--task/.test(hd.stdout), true);
       const r2 = run(["report"], repo);

@@ -5,6 +5,12 @@
 - 结论先行：一句话判定「现在能不能发 / 还有关没跑 / 可以发」，只列阻塞项与修复命令；已过的关压成一行，不再是一张要走读的关表格。
 - 守卫体检：最近一次全绿（距今多少提交）、安装点以来过闸率、绕过闸门数（带名单）、守卫在位（钩子 3/3 + CI）——回答「这层守卫有没有在真的保护你」，而不是「上一次结果是什么」。
 - 默认黑底：`color-scheme: dark`，正文 `#e9eaed`，过 / 红 / 待跑分别是 `#4ade80` / `#f87171` / `#fbbf24`；白底在这个场景里既刺眼又把三色压平。
+- 跑闸趋势：每次跑闸往 `.signoff/runs.log` 追加一行 `{ts, gate, ok, ms}`，页面按项画出「最近 30 次」的绿红条与通过率、最近耗时——这是唯一新增的状态文件，`jsonl` 追加、坏了不影响闸。
+- 每组过闸率：任务组现在带 `过闸率`，并把「工作方式本身在绕闸」的组（≥3 次提交却没有全绿）单列一行，点名 + 次数。
+- 危险动作打在哪：P4 票据按目录聚类，列出记录最多、被拒最多的目录。
+- 多仓库：`--repos a,b` / `--scan DIR` 一页看多个仓库，先比「谁挡住你」，再逐个展开。
+- 发布项接上过闸记录：`tag` 之后每个提交都带 trailer 才算可发，detail 直接写「tag 之后 N 个提交，未走闸 M」。
+- `--would-block`：只读预演当前工作树会被哪些离线关挡住（密钥 / 文档 / 覆盖率缓存），并写明哪些项必须真跑。
 - 七项而不是五关：测试 / 覆盖率 / 并发任务 / 危险动作 / 文档 / 密钥 / **发布**。发布项没有状态文件，用 `package.json`、`server.json`、`CHANGELOG.md` 与 `git tag` 现算，并标出「tag 之后还有 N 个提交」。
 - 月历：有记录的日子带计数，点某天看那天的事件，默认今天，可翻月 / 回今天。
 - 按任务：自动整理出全部任务组（P3 任务卡 ∪ 提交范围 `feat(report)` → `report`），默认收起，一次只展开一个。
@@ -113,7 +119,7 @@
   老地址仍可用（实测 `raw.githubusercontent` 老路径同样返回 200）。
 - MCP 注册表条目改为 `io.github.ayuanxx-max/signoff-cli`（注册表名与仓库名绑定）；旧条目
   `io.github.ayuanxx-max/signoff` 保留为历史，不再更新。
-- `package.json#repository`、`server.json#repository.url`、README/文档里的绝对链接、`signoff.json` 的 schema URL
+- `package.json#repository`、`server.json#repository.url`、README/文档里的完整链接、`signoff.json` 的 schema URL
   全部指向新仓库。
 - 包名、命令（`signoff`）、功能集不变。
 
@@ -267,7 +273,7 @@
 - 新增 `lib/bootstrap.js`：机器层用 `core.hooksPath` 指向 `~/.signoff/hooks`，本机所有仓库（含新克隆）
   下一次 commit 就受约束；派发脚本先执行仓库自带的 `.git/hooks/<stage>`，判决仍归仓库。
 - `package.json` 增加 `postinstall`：全局安装时自动装机器层，在仓库内安装时顺便把该仓库五关装好；
-  postinstall 永不失败（失败也 exit 0，不会弄坏别人的 npm install）。
+  postinstall 不会失败（失败也 exit 0，不会弄坏别人的 npm install）。
 - 未 opt-in 的仓库只跑 P1（测试），不写 `.signoff/config.json`、不写 marker、不带 trailer：
   机器层不会把「没同意过 P2–P5 规矩」的仓库拦在门外。
 - 两个逃生阀：`SIGNOFF_NO_BOOTSTRAP=1`、`SIGNOFF_NO_MACHINE=1`；撤销机器层用 `signoff uninstall --global`。
