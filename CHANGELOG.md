@@ -1,3 +1,22 @@
+## 4.3.1
+
+**修 4.3.0 在英文系统里自测变红。**
+
+- 4.3.0 的页面语言默认跟随系统，而自测里大量断言写的是中文页面；CI（`LANG=en_US.UTF-8`）与任何英文
+  系统上 `node test/selftest.js` 因此失败。测试现在把 `SIGNOFF_LANG=zh` 固定进子进程环境，断言与系统语言无关；
+  `--lang` 的两条用例仍然显式传 `--lang en` / `--lang de` 覆盖它。
+- 行为没有变化：页面默认仍跟随系统语言。
+
+### English
+
+**Fixes 4.3.0 turning its own suite red on an English system.**
+
+- Since 4.3.0 the page follows the system language, while the suite asserts on Chinese page text. On CI
+  (`LANG=en_US.UTF-8`) and on any English machine, `node test/selftest.js` therefore failed. The subprocess
+  environment now pins `SIGNOFF_LANG=zh`, so the assertions no longer depend on the host locale; the two `--lang`
+  cases still pass `--lang en` / `--lang de` explicitly and override it.
+- No behaviour change: the page still follows the system language by default.
+
 ## 4.3.0
 
 **看板说两种语言：`--lang zh|en|auto`，默认跟随系统。**

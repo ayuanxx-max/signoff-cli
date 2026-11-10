@@ -28,7 +28,9 @@ function run(args, cwd, env) {
     // A report for a busy repo is far bigger than the 1 MB spawnSync default.
     maxBuffer: 64 * 1024 * 1024,
     // Fixtures are not the user's repos: no auto-install unless a test asks for it.
-    env: { ...process.env, SIGNOFF_HOME: HOME, SIGNOFF_NO_BOOTSTRAP: "1", ...(env || {}) },
+    env: { ...process.env, SIGNOFF_HOME: HOME, SIGNOFF_NO_BOOTSTRAP: "1",
+      // 页面语言在测试里固定成中文：CI 的系统区域是 en，跟随系统会让中文断言随机变红。
+      SIGNOFF_LANG: "zh", ...(env || {}) },
   });
 }
 
