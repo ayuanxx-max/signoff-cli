@@ -1261,6 +1261,10 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       );
       check("page script never leaves the file", !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html), true);
       check("hero text is not double-escaped", /&lt;b&gt;/.test(html), false);
+      check("page is dark by default", /--bg:#0e1013/.test(html), true);
+      check("dark page keeps readable ink", /--ink:#e9eaed/.test(html), true);
+      check("dark page has no light sheet", /background:\s*#fafafa/i.test(html), false);
+      check("page shows guard health", /守卫有没有在真的保护你/.test(html), true);
 
       const parsed = JSON.parse(run(["report", "--json"], repo).stdout);
       check("report --json is machine readable", !!(parsed && Array.isArray(parsed.gates)), true);
@@ -1278,6 +1282,9 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
         true
       );
       check("summary counts commits", typeof parsed.summary.commits, "number");
+      check("health tells the guarded span", typeof parsed.health.guarded, "number");
+      check("health rate is a share", parsed.health.rate === null || (parsed.health.rate >= 0 && parsed.health.rate <= 100), true);
+      check("health counts bypasses", typeof parsed.health.unmarkedTotal, "number");
 
       check("page has a month calendar", /id="cal"/.test(html), true);
       check("calendar cells carry dates", /data-day="\d{4}-\d{2}-\d{2}"/.test(html), true);
