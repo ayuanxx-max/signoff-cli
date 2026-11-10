@@ -178,6 +178,28 @@ signoff report --would-block       # 只读预演：现在提交会被哪些离�
 直接回答「现在提交会被挡吗」，并明确写出哪些项（测试 / 并发任务 / 发布）**必须真跑**才能判断。
 它不执行测试、不写状态、不豁免任何关。
 
+**给别人用：`--mount`**。页面默认躺在 `.signoff/`（gitignore），别人拿不到；`--mount [DIR]` 把它放到一个固定、
+可发现的位置，默认 `~/.signoff/reports`：
+
+```
+~/.signoff/reports/
+  index.html            所有已挂载仓库的索引页（结论 / 阻塞项 / 过闸率 / json 链接）
+  index.json            同一份清单，机器读
+  <仓库>-<路径指纹>/
+    latest.html         这一仓的完整页面（单文件，拷走就能看）
+    report.json         同一份数据
+```
+
+三类用法，都不需要额外配置：
+
+| 谁 | 怎么用 | 依赖 |
+| --- | --- | --- |
+| 自己 | `signoff report --html --mount --open` | 本机浏览器（win `start` / mac `open` / linux `xdg-open`） |
+| 同事 / 别的机器 | 拷走 `~/.signoff/reports/` 整个目录，或把它当 CI artifact 上传 | 一个浏览器，零依赖 |
+| agent / 脚本 | `signoff report --json`，或 MCP 客户端调 `signoff_report`（`signoff mcp` 已在包里） | 不需要渲染页面 |
+
+挂载只写自己的目录，不碰被检查的仓库；`--scan DIR --mount` 会把扫到的每个仓库各挂一份，索引页汇总。
+
 **契约与挂载**：报告页的行为写在 `docs/REPORT-CONTRACT.md`（C1…C10），这是唯一正文；
 `AGENTS.md` / `CLAUDE.md` / `.github/copilot-instructions.md` / `.cursor/rules/signoff-report.mdc`
 只是指过来的薄壳，供不同 agent 工具识别。没有仓库上下文时，`signoff report --contract` 会直接打印这份文件——

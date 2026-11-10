@@ -1339,6 +1339,21 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       check("report -h names the flags", /--html/.test(hd.stdout) && /--task/.test(hd.stdout), true);
       const r2 = run(["report"], repo);
       check("report defaults to --html", r2.status, 0, (r2.stderr || "").slice(0, 80));
+      // --mount: a fixed, discoverable place for other machines and other agents
+      const mdir = path.join(base, "mount");
+      const mr = run(["report", "--html", "--mount", mdir], repo);
+      check("--mount exits 0", mr.status, 0, (mr.stderr || "").slice(0, 80));
+      check("--mount writes an index", fs.existsSync(path.join(mdir, "index.html")), true);
+      const mm = JSON.parse(run(["report", "--json", "--mount", mdir], repo).stdout);
+      check("--mount reports where it went", !!mm.mounted.slug, true);
+      check("--mount writes the page", fs.existsSync(path.join(mdir, mm.mounted.slug, "latest.html")), true);
+      check("--mount keeps machine readable copy", fs.existsSync(path.join(mdir, mm.mounted.slug, "report.json")), true);
+      const idx = JSON.parse(fs.readFileSync(path.join(mdir, "index.json"), "utf8"));
+      check("--mount records the repo in the index", !!idx.repos[mm.mounted.slug], true);
+      check("--mount index links the page", /latest\.html/.test(fs.readFileSync(path.join(mdir, "index.html"), "utf8")), true);
+      run(["report", "--html", "--mount", mdir], repo);
+      const idx2 = JSON.parse(fs.readFileSync(path.join(mdir, "index.json"), "utf8"));
+      check("--mount is idempotent per repo", Object.keys(idx2.repos).length, 1);
       check("default report lands in .signoff", fs.existsSync(path.join(repo, ".signoff", "report.html")), true);
     } finally {
       fs.rmSync(base, { recursive: true, force: true });

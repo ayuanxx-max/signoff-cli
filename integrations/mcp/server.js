@@ -6,7 +6,7 @@
 //
 //   node integrations/mcp/server.js
 //
-// Tools: signoff_run, signoff_status, signoff_doctor, signoff_audit, signoff_explain.
+// Tools: signoff_run, signoff_status, signoff_doctor, signoff_audit, signoff_explain, signoff_report.
 // Every tool forwards to `signoff <subcommand>` in the client's cwd and returns the
 // combined stdout/stderr plus the exit code, because the exit code is the verdict.
 
@@ -55,6 +55,21 @@ const TOOLS = [
     },
   },
   {
+    name: "signoff_report",
+    description:
+      "Read-only board about this repo: verdict (can I ship), blockers with fixes, the seven checks, guard health, task groups, run trend. Same JSON as `signoff report --json`.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        gate: { type: "string", enum: ["p1", "p2", "p3", "p4", "p5", "sec", "release"], description: "limit the board to one check" },
+        task: { type: "string", description: "limit to one task group key, e.g. report" },
+        days: { type: "number", description: "look back N days (default 120)" },
+        wouldBlock: { type: "boolean", description: "read-only preview: what would block a commit right now" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "signoff_explain",
     description: "Explain what one gate checks and how it decides: p1, p2, p3, p4 or p5.",
     inputSchema: {
@@ -97,6 +112,14 @@ function runTool(name, args) {
     }
     case "signoff_explain":
       return callSignoff(["explain", String((args && args.gate) || "")]);
+    case "signoff_report": {
+      const argv = ["report", "--json"];
+      if (args && args.gate) argv.push("--gate", String(args.gate));
+      if (args && args.task) argv.push("--task", String(args.task));
+      if (args && args.days) argv.push("--days", String(args.days));
+      if (args && args.wouldBlock) argv.push("--would-block");
+      return callSignoff(argv);
+    }
     default:
       throw Object.assign(new Error(`unknown tool: ${name}`), { code: -32602 });
   }
