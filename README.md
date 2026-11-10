@@ -200,6 +200,9 @@ signoff report --would-block       # 只读预演：现在提交会被哪些离�
 
 挂载只写自己的目录，不碰被检查的仓库；`--scan DIR --mount` 会把扫到的每个仓库各挂一份，索引页汇总。
 
+**各平台各 agent 怎么接**：见 `docs/SURFACES.md`——核心只有 `report --json` 与 MCP 的 `signoff_report`，
+DSH 侧栏面板、MCP 客户端、终端、CI、编辑器都只是把同一份数据渲染出来，判定不复制。
+
 **契约与挂载**：报告页的行为写在 `docs/REPORT-CONTRACT.md`（C1…C10），这是唯一正文；
 `AGENTS.md` / `CLAUDE.md` / `.github/copilot-instructions.md` / `.cursor/rules/signoff-report.mdc`
 只是指过来的薄壳，供不同 agent 工具识别。没有仓库上下文时，`signoff report --contract` 会直接打印这份文件——
