@@ -1,0 +1,26 @@
+{
+  "app": "signoff-cli",
+  "flow": "报告契约：页面、面板、CI 读的是同一份约定",
+  "checks": [
+    {
+      "name": "contract exists",
+      "expect": "契约文件随包分发"
+    },
+    {
+      "name": "contract numbers its clauses",
+      "expect": "条款可引用（C1…）"
+    },
+    {
+      "name": "contract names the seven checks",
+      "expect": "七项闸门都在契约里"
+    },
+    {
+      "name": "contract ships in the package",
+      "expect": "files 里带 docs/"
+    },
+    {
+      "name": "server.json tracks the package version",
+      "expect": "版本号三处一致"
+    }
+  ]
+}

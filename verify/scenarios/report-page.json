@@ -1,0 +1,30 @@
+{
+  "app": "signoff-cli",
+  "flow": "离线页面：一页看完判定、阻塞项与修复命令",
+  "checks": [
+    {
+      "name": "report --html exits 0",
+      "expect": "页面能生成，退出码 0"
+    },
+    {
+      "name": "report --json is machine readable",
+      "expect": "同一份数据有 JSON 形态"
+    },
+    {
+      "name": "report --json keeps seven checks",
+      "expect": "七项闸门不多不少"
+    },
+    {
+      "name": "report --json carries a verdict",
+      "expect": "判定是 blocked/ready/unknown 之一"
+    },
+    {
+      "name": "default report lands in .signoff",
+      "expect": "默认落在 .signoff，不污染仓库"
+    },
+    {
+      "name": "report -h names the flags",
+      "expect": "帮助里列得出 --html/--task"
+    }
+  ]
+}

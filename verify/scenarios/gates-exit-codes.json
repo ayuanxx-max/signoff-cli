@@ -1,0 +1,30 @@
+{
+  "app": "signoff-cli",
+  "flow": "闸门判定：退出码就是结论，0 过 / 1 红 / 2 用法错",
+  "checks": [
+    {
+      "name": "p1 pass",
+      "expect": "测试全过时 p1 绿"
+    },
+    {
+      "name": "p2 pass",
+      "expect": "场景够数时 p2 绿"
+    },
+    {
+      "name": "p2 fail on threshold",
+      "expect": "场景不够时 p2 红"
+    },
+    {
+      "name": "p5 clean green",
+      "expect": "文档干净时 p5 绿"
+    },
+    {
+      "name": "p5 dirty red",
+      "expect": "文档有脏值时 p5 红"
+    },
+    {
+      "name": "audit json ok",
+      "expect": "审计记录可机读"
+    }
+  ]
+}

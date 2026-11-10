@@ -1276,6 +1276,13 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       check("report --json carries events", Array.isArray(parsed.events), true);
       check("report --json carries tasks", Array.isArray(parsed.tasks), true);
       check("report --json carries a verdict", ["blocked", "ready", "unknown"].includes(parsed.verdict), true);
+
+  // 判定措辞：说的是「哪几项没过」，不是「谁准你发」。
+  check("headline counts gates, not permission", /项/.test(parsed.headline || "") && !/不能发|可以发/.test(parsed.headline || ""), true, parsed.headline);
+  {
+    const panelSrc = fs.readFileSync(path.join(__dirname, "..", "integrations", "dsh-panel", "client.js"), "utf8");
+    check("panel badge drops the permission wording", /不能发|可以发/.test(panelSrc), false);
+  }
       const anyRed = parsed.gates.some((g) => g.ran && g.ok === false);
       check("verdict follows the gates", parsed.verdict === "blocked", anyRed);
       check("blockers are explained", parsed.verdict !== "blocked" || parsed.blockers.length > 0, true);
@@ -1405,6 +1412,25 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     const big = spawnSync(process.execPath, ["-e", bigSrc], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
     check("a large document reaches the reader", big.stdout.length, 400000);
     check("the writer leaves the exit code alone", run(["report", "--gate", "p9"], os.tmpdir()).status, 2);
+  }
+
+  // 场景卡是覆盖率声明：卡里点名的每个断言，都必须是这条自测里真实存在的 check。
+  {
+    const source = fs.readFileSync(__filename, "utf8");
+    const sdir = path.join(__dirname, "..", "verify", "scenarios");
+    const files = fs.existsSync(sdir) ? fs.readdirSync(sdir).filter((f) => f.endsWith(".json")).sort() : [];
+    check("scenario cards exist", files.length >= 3, true, `${files.length} files`);
+    const claims = [];
+    const forged = [];
+    for (const f of files) {
+      const card = JSON.parse(fs.readFileSync(path.join(sdir, f), "utf8"));
+      for (const c of card.checks || []) {
+        claims.push(c.name);
+        if (source.indexOf('check("' + c.name + '"') === -1) forged.push(`${f}: ${c.name}`);
+      }
+    }
+    check("scenario checks are real assertions", forged.length, 0, forged.slice(0, 3).join(" | "));
+    check("scenario cards measure real coverage", claims.length >= 20, true, `${claims.length} checks`);
   }
 
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);

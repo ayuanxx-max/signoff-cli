@@ -1,0 +1,38 @@
+{
+  "app": "signoff-cli",
+  "flow": "挂载目录：把一页看板放到固定位置，给别的机器和别的 agent 读",
+  "checks": [
+    {
+      "name": "--mount exits 0",
+      "expect": "挂载成功"
+    },
+    {
+      "name": "--mount writes an index",
+      "expect": "写 index.json"
+    },
+    {
+      "name": "--mount reports where it went",
+      "expect": "回显挂载路径"
+    },
+    {
+      "name": "--mount writes the page",
+      "expect": "写页面文件"
+    },
+    {
+      "name": "--mount keeps machine readable copy",
+      "expect": "留一份机器可读副本"
+    },
+    {
+      "name": "--mount records the repo in the index",
+      "expect": "索引里登记这个仓库"
+    },
+    {
+      "name": "--mount index links the page",
+      "expect": "索引指向页面，不写绝对路径"
+    },
+    {
+      "name": "--mount is idempotent per repo",
+      "expect": "同仓库重挂不产生第二份"
+    }
+  ]
+}

@@ -1,3 +1,34 @@
+## 4.2.2
+
+**判定不再说「能不能发」，直接说哪几项没过；p2 那片红也一并修掉了。**
+
+- 措辞：页面标题、DSH 面板徽章、`report --json` 的 `headline` 统一成 `1 项未过：覆盖率` /
+  `1 项没跑过：危险动作` / `7 项全过`。「现在不能发 / 可以发」读起来像在征求许可，底下的事实只是
+  「七项闸门里有几项是红的」，说不清是哪一项。
+- p2 覆盖率：仓库补了 `verify/scenarios/` 四张场景卡（report-page / report-mount / gates-exit-codes /
+  release-surface，共 25 条断言），`signoff p2` 现在是 `scenario` 级、`PASS apps=1 scenario=1 assertions=25`。
+- 自测守住场景卡不注水：卡里点名的每个断言，必须在 `test/selftest.js` 里真实存在，否则自测变红。
+- p2 的修复提示不再硬编码 `--min-scenario 3`（单应用仓库永远够不到 3）：场景为 0 时提示
+  「补 verify/scenarios/*.json」，够数后按实际应用数给 `--min-scenario N`。
+- `npm test` 404 passed / 0 failed。
+
+### English
+
+**The verdict no longer asks permission — it names the gates that are red, and p2's red is gone.**
+
+- Wording: the page title, the DSH panel badge and `headline` in `report --json` now read
+  `1 项未过：覆盖率` / `1 项没跑过：危险动作` / `7 项全过`. "Cannot ship / can ship" sounded like a
+  permission question; the underlying fact is just how many of the seven gates are red — and which.
+- p2 coverage: four scenario cards under `verify/scenarios/` (report-page, report-mount,
+  gates-exit-codes, release-surface — 25 assertions), so `signoff p2` is `scenario` level and
+  `PASS apps=1 scenario=1 assertions=25`.
+- The self-test keeps the cards honest: every assertion a card names must exist as a real check in
+  `test/selftest.js`, or the suite goes red.
+- The p2 fix hint is no longer a hardcoded `--min-scenario 3` (a single-app repo can never reach 3):
+  with zero scenarios it says "add verify/scenarios/*.json"; once there are cards it derives the
+  number from the apps actually found.
+- `npm test` 404 passed / 0 failed.
+
 ## 4.2.1
 
 **修一个只在 macOS 上现身的截断：大的 `--json` 输出会丢尾巴。**
