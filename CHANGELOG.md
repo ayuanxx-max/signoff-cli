@@ -11,6 +11,8 @@
 - 多仓库：`--repos a,b` / `--scan DIR` 一页看多个仓库，先比「谁挡住你」，再逐个展开。
 - 发布项接上过闸记录：`tag` 之后每个提交都带 trailer 才算可发，detail 直接写「tag 之后 N 个提交，未走闸 M」。
 - `--would-block`：只读预演当前工作树会被哪些离线关挡住（密钥 / 文档 / 覆盖率缓存），并写明哪些项必须真跑。
+- `docs/REPORT-CONTRACT.md`：报告页的书面契约（C1…C10），配 `AGENTS.md` / `CLAUDE.md` / Copilot / Cursor 四个薄壳指针，
+  以及 `signoff report --contract`（随包分发、与正文逐字节一致）；自测会校验指针存在、薄壳够薄、正文无本机路径。
 - 七项而不是五关：测试 / 覆盖率 / 并发任务 / 危险动作 / 文档 / 密钥 / **发布**。发布项没有状态文件，用 `package.json`、`server.json`、`CHANGELOG.md` 与 `git tag` 现算，并标出「tag 之后还有 N 个提交」。
 - 月历：有记录的日子带计数，点某天看那天的事件，默认今天，可翻月 / 回今天。
 - 按任务：自动整理出全部任务组（P3 任务卡 ∪ 提交范围 `feat(report)` → `report`），默认收起，一次只展开一个。

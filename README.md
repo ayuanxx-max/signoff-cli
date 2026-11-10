@@ -178,6 +178,19 @@ signoff report --would-block       # 只读预演：现在提交会被哪些离�
 直接回答「现在提交会被挡吗」，并明确写出哪些项（测试 / 并发任务 / 发布）**必须真跑**才能判断。
 它不执行测试、不写状态、不豁免任何关。
 
+**契约与挂载**：报告页的行为写在 `docs/REPORT-CONTRACT.md`（C1…C10），这是唯一正文；
+`AGENTS.md` / `CLAUDE.md` / `.github/copilot-instructions.md` / `.cursor/rules/signoff-report.mdc`
+只是指过来的薄壳，供不同 agent 工具识别。没有仓库上下文时，`signoff report --contract` 会直接打印这份文件——
+它随 npm 包一起分发，所以任何机器上装了 CLI 就能拿到同一份条款。改契约必须同时改自测断言，否则违约会变红。
+
+| 层 | 位置 | 谁读 | 保证什么 |
+| --- | --- | --- | --- |
+| 正文 | `docs/REPORT-CONTRACT.md` | 人 / 任意 agent | 只此一份，条款编号 C1…C10 |
+| 指针 | `AGENTS.md`、`CLAUDE.md`、`.github/`、`.cursor/rules/` | Codex / Claude Code / Copilot / Cursor / DSH | 各工具按自己的约定入口找到同一个地方，薄壳不复制条款 |
+| 运行时 | `signoff report --contract` | 没有仓库的 agent、CI、离线机器 | 随包分发，字节与正文一致（自测比对） |
+| 强制 | `test/selftest.js` | 预提交钩子 / CI | 违约 = 红色，不靠模型自觉 |
+| 跨会话 | OpenViking `viking://resources/dsh/signoff-report-contract.md` | 别的机器、别的会话 | 检索得到，指向同一份正文 |
+
 这一页**没有**任何能通过、跳过或放宽闸门的控件——那正是三条红线（`--no-verify`、`SIGNOFF_SKIP=1`、
 调阈值让红变绿）最容易被悄悄破掉的地方。数据只来自 `.signoff/*.json` 与 `git`，跑它不执行任何关，
 也不联网。

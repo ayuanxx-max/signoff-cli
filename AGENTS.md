@@ -1,0 +1,29 @@
+# AGENTS.md — signoff-cli
+
+这个仓库的一切"该怎么改"都以 `docs/REPORT-CONTRACT.md` 为准；本文件只做指路与流程，不重复条款。
+
+## 先读什么
+
+1. `docs/REPORT-CONTRACT.md` —— 报告页的契约（C1…C10），改 `lib/report.js` / `lib/report-page.js` 前必读。
+2. `README.md` —— 命令行与闸门语义。
+3. `docs/gates.md` —— P1…P5 的判定细节。
+
+## 怎么改
+
+- 逻辑变更先写失败测试（`test/selftest.js`），再改实现；`npm test` 必须全绿。
+- 只改必须改的文件；不要顺手重排、重命名、加依赖。
+- 页面只允许"切换视图"的脚本；不得引入外链、`fetch`、或任何能通过/跳过/放宽闸门的控件（C2、C3）。
+- 三条红线不在任何模式下放开：`--no-verify`、`SIGNOFF_SKIP=1`、调阈值让红变绿。
+
+## 提交前
+
+```bash
+npm test                 # node test/selftest.js
+signoff p5               # 文档口径扫描（会挡"绝对/必然"这类无数字断言）
+git add -A && git commit # 钩子会跑 p1 + secrets
+```
+
+## 发布
+
+当前状态：**暂停发布**。版本号、`server.json`、`CHANGELOG.md`、`git tag` 必须一致；
+`signoff report` 的"发布"项会现算这四件事，不一致就是红。

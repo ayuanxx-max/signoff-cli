@@ -1345,6 +1345,40 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     }
   }
 
+  // 19. The written contract: one canonical file, thin pointers for every agent
+  // convention, and a runtime entry point that ships with the package.
+  {
+    const pkgRoot = path.join(__dirname, "..");
+    const contractPath = path.join(pkgRoot, "docs", "REPORT-CONTRACT.md");
+    const contract = fs.existsSync(contractPath) ? fs.readFileSync(contractPath, "utf8") : "";
+    check("contract exists", fs.existsSync(contractPath), true);
+    check("contract numbers its clauses", Array.from({ length: 10 }, (_, i) => `C${i + 1}`).every((id) => contract.includes(`### ${id}`) || contract.includes(id)), true);
+    check("contract is platform neutral", !/[A-Za-z]:\\Users|\/home\/|Administrator/.test(contract), true);
+    check("contract names the seven checks", ["测试", "覆盖率", "并发任务", "危险动作", "文档", "密钥", "发布"].every((l) => contract.includes(l)), true);
+
+    const pointers = [
+      "AGENTS.md",
+      "CLAUDE.md",
+      path.join(".github", "copilot-instructions.md"),
+      path.join(".cursor", "rules", "signoff-report.mdc"),
+    ];
+    for (const rel of pointers) {
+      const file = path.join(pkgRoot, rel);
+      const text = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
+      check(`pointer exists: ${rel}`, fs.existsSync(file), true);
+      check(`pointer is thin: ${rel}`, text.split("\n").length <= 60, true);
+      check(`pointer points home: ${rel}`, text.includes("docs/REPORT-CONTRACT.md"), true);
+    }
+
+    const pkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"));
+    check("contract ships in the package", (pkg.files || []).includes("docs/"), true);
+
+    const printed = run(["report", "--contract"], pkgRoot);
+    check("--contract exits 0", printed.status, 0, (printed.stderr || "").slice(0, 80));
+    check("--contract prints the file", printed.stdout.trim() === contract.trim(), true);
+    check("--contract works outside a repo", run(["report", "--contract"], os.tmpdir()).status, 0);
+  }
+
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);
   for (const line of PASS) console.log(`PASS ${line}`);
   for (const line of FAIL) console.log(`FAIL ${line}`);

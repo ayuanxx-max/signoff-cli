@@ -1,0 +1,11 @@
+---
+description: signoff-cli 报告页契约（C1…C10）
+globs: ["lib/report*.js", "test/selftest.js"]
+alwaysApply: false
+---
+
+改报告页或闸门之前，先读 `docs/REPORT-CONTRACT.md`（唯一权威，C1…C10）。本文件是薄壳，不复制条款。
+
+- 页面只读、离线单文件、无外链、无 `fetch`；按钮只能是导航（`data-step`）。
+- 七项固定：p1 测试 / p2 覆盖率 / p3 并发任务 / p4 危险动作 / p5 文档 / sec 密钥 / release 发布。
+- 改契约必须同时改 `test/selftest.js` 的断言，`npm test` 全绿才算完成。
