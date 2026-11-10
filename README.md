@@ -133,6 +133,9 @@ signoff explain p2           # 这一关到底查什么、怎么判的
 signoff secrets              # 只扫暂存区的密钥泄露（钩子里自动先跑）
 signoff secrets --all --json # 全仓库扫一遍，一条 JSON 判决
 signoff report --html        # 一页只读看板：能不能发 + 月历 + 按任务
+
+页面语言默认跟随系统：`signoff report --html --lang en` 出英文页，`--lang zh` 出中文页，不带就是 `auto`
+（`SIGNOFF_LANG` → `LC_ALL`/`LANG` → 系统区域 → 中文）。DSH 侧栏面板按窗口语言自己切。
 signoff report --days 90     # 只看最近 90 天
 signoff report --since 2026-11-01 --until 2026-11-10
 signoff report --task release      # 只看某个任务：任务卡 id、提交范围、sha 前缀或标题关键词
@@ -144,7 +147,7 @@ signoff report --would-block       # 只读预演：现在提交会被哪些离�
 
 ### 看现状：一页只读看板
 
-`signoff report --html` 回答三个问题：**现在能不能发**、**某一天发生了什么**、**每个任务过了什么闸**。
+`signoff report --html` 回答三个问题：**哪几项没过**、**某一天发生了什么**、**每个任务过了什么闸**。
 默认写到 `.signoff/report.html`（该目录已在 gitignore 里），`--out` 指定别处，`--json` 给脚本。
 
 页面不再是一张关表格（那对读的人没意义），而是几块：
@@ -417,6 +420,10 @@ signoff release --post   # 发布后：npm latest、注册表 isLatest / package
 - **不联网**：除 `git` 与本地解释器外不调用外部服务。
 
 ## English
+
+**Language.** The board follows your system language by default: `signoff report --html --lang en` renders the
+English page, `--lang zh` the Chinese one, and omitting it means `auto` (`SIGNOFF_LANG` → `LC_ALL`/`LANG` → system
+locale → Chinese). The DSH panel switches on its own, using the window language.
 
 ### Package name (since 4.0.0)
 

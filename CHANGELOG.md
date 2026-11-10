@@ -1,3 +1,31 @@
+## 4.3.0
+
+**看板说两种语言：`--lang zh|en|auto`，默认跟随系统。**
+
+- `signoff report` 新增 `--lang`（`zh` / `en` / `auto`）。`auto` 依次看 `SIGNOFF_LANG`、`LC_ALL`/`LC_MESSAGES`/`LANG`、
+  系统区域（`Intl`），都没有就中文；未知值报用法错（退出码 2），不悄悄给中文。
+- 页面里每一句面向读者的话都走 `lib/i18n.js`：标题、判定、七关详情、阻塞项、月历、任务、守卫体检、页脚。
+  中文输出与 4.2.3 逐字节一致（时间戳与未提交数除外）——翻译是加了一层，不是另起一版。
+- DSH 侧栏面板按窗口语言切：`integrations/dsh-panel/client.js` 内置中英两份文案，不依赖宿主接口。
+- 自测 +8：`--lang en` 出 `<html lang="en">` 且页脚为英文、`--lang zh` 保持中文、`--lang de` 退出码 2、
+  **每个 `T("…")` 都必须在词表里有英文**（漏翻即红）。`npm test` 413 passed / 0 failed。
+
+### English
+
+**The board speaks two languages: `--lang zh|en|auto`, following the system by default.**
+
+- `signoff report` gains `--lang` (`zh` / `en` / `auto`). `auto` reads `SIGNOFF_LANG`, then `LC_ALL`/`LC_MESSAGES`/`LANG`,
+  then the system locale (`Intl`), and falls back to Chinese; an unknown value is a usage error (exit 2) instead of a
+  silent fallback.
+- Every reader-facing string goes through `lib/i18n.js`: headline, verdict, the seven gate details, blockers, calendar,
+  tasks, guard health, footer. Chinese output stays byte-identical to 4.2.3 (bar timestamps and the dirty count) —
+  this adds a layer rather than forking the page.
+- The DSH side panel switches on the window language: `integrations/dsh-panel/client.js` carries both tables and needs
+  no host API.
+- Seven new self-tests: `--lang en` yields `<html lang="en">` with an English footer, `--lang zh` stays Chinese,
+  `--lang de` exits 2, and **every `T("…")` must have an English entry** (a missed translation turns the suite red).
+  `npm test` 413 passed / 0 failed.
+
 ## 4.2.3
 
 **`release --post` 不再把同一个仓库的两种写法判成两个仓库。**

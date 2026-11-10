@@ -1261,6 +1261,21 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
         (html.match(/<button/g) || []).length === (html.match(/<button[^>]*data-step/g) || []).length,
         true
       );
+
+      // 语种：--lang 决定页面语言（auto 跟随系统），未知值报用法错；词表必须覆盖所有 T(...)。
+      const enOut = path.join(base, "report-en.html");
+      const rEn = run(["report", "--html", "--lang", "en", "--out", enOut], repo);
+      const enHtml = fs.existsSync(enOut) ? fs.readFileSync(enOut, "utf8") : "";
+      check("report --lang en exits 0", rEn.status, 0, (rEn.stderr || "").slice(0, 80));
+      check("en page declares its language", /<html lang="en"/.test(enHtml), true);
+      check("en page translates the chrome", /generated/.test(enHtml) && /SignOff/.test(enHtml) && !/生成于|现在不能发|现在可以发/.test(enHtml), true);
+      check("zh page stays chinese", /<html lang="zh-CN"/.test(html) && /生成于/.test(html), true);
+      const rDe = run(["report", "--html", "--lang", "de", "--out", path.join(base, "report-de.html")], repo);
+      check("unknown --lang is a usage error", rDe.status, 2, (rDe.stderr || "").slice(0, 80));
+      const i18n = require(path.join(ROOT, "lib", "i18n.js"));
+      const srcText = fs.readFileSync(path.join(ROOT, "lib", "report.js"), "utf8");
+      const missing = [...srcText.matchAll(/T\("((?:[^"\\]|\\.)*)"\)/g)].map((m) => m[1].replace(/\\"/g, '"')).filter((k) => !(k in i18n.EN));
+      check("every wrapped string has an english entry", missing.length, 0, missing.slice(0, 6).join(" | "));
       check("page script never leaves the file", !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html), true);
       check("hero text is not double-escaped", /&lt;b&gt;/.test(html), false);
       check("page is dark by default", /--bg:#0e1013/.test(html), true);
@@ -1282,6 +1297,7 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
   {
     const panelSrc = fs.readFileSync(path.join(__dirname, "..", "integrations", "dsh-panel", "client.js"), "utf8");
     check("panel badge drops the permission wording", /不能发|可以发/.test(panelSrc), false);
+    check("panel follows the browser language", /navigator\.language/.test(panelSrc) && /blocked: "failed"/.test(panelSrc), true);
   }
       const anyRed = parsed.gates.some((g) => g.ran && g.ok === false);
       check("verdict follows the gates", parsed.verdict === "blocked", anyRed);

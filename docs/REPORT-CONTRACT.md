@@ -88,3 +88,8 @@
 | `signoff report --contract` | 运行时 / 无仓库上下文的 agent | 打印本文件原文（随 npm 包分发） |
 | `test/selftest.js`（契约与报告断言） | CI / 预提交钩子 | 让违约变成红色 |
 | OpenViking `viking://resources/dsh/signoff-report-contract.md` | 跨会话、跨机器检索 | 让没有本仓库的 agent 也能取到 |
+
+## 语言（4.3.0 起）
+
+页面语种在**生成时**决定：`signoff report --lang zh|en|auto`。这不违反 C2/C3——语言只换文字，不新增任何控件，
+页面脚本仍只做「切换视图」。所有面向读者的文案必须经过 `lib/i18n.js` 的 `T("…")`，词表缺英文时自测会红。
