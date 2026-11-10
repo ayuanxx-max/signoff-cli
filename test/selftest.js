@@ -1234,7 +1234,8 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     }
   }
 
-  // 18. `signoff report --html`: one self-contained page, read-only by construction.
+  // 18. `signoff report`: one self-contained, read-only page — a verdict, a month
+  // calendar, one-at-a-time tasks — plus the same data as JSON.
   {
     const base = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-report-"));
     try {
@@ -1247,62 +1248,71 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       check("report is one html document", /^<!doctype html>/i.test(html), true);
       check("report inlines css", /<style>/.test(html), true);
       check("report loads no external asset", !/(?:src|href)="(?:https?:)?\/\//.test(html), true);
-      check("report pages every gate", ["P1", "P2", "P3", "P4", "P5", "SEC"].every((g) => html.includes(`>${g}`)), true);
-      check("page has no control that could pass a gate", /<button|<form|type="checkbox"/.test(html), false);
-      const rj = run(["report", "--json"], repo);
-      check("report --json exits 0", rj.status, 0);
-      let parsed = null;
-      try {
-        parsed = JSON.parse(rj.stdout);
-      } catch (e) {
-        parsed = null;
-      }
+      check(
+        "report names all seven checks",
+        ["测试", "覆盖率", "并发任务", "危险动作", "文档", "密钥", "发布"].every((l) => html.includes(l)),
+        true
+      );
+      check("report has no form control", /<form|type="checkbox"|type="submit"|<input/.test(html), false);
+      check(
+        "every button is navigation",
+        (html.match(/<button/g) || []).length === (html.match(/<button[^>]*data-step/g) || []).length,
+        true
+      );
+      check("page script never leaves the file", !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html), true);
+      check("hero text is not double-escaped", /&lt;b&gt;/.test(html), false);
+
+      const parsed = JSON.parse(run(["report", "--json"], repo).stdout);
       check("report --json is machine readable", !!(parsed && Array.isArray(parsed.gates)), true);
-      check("report --json keeps six gates", parsed && parsed.gates.length, 6);
+      check("report --json keeps seven checks", parsed.gates.length, 7);
+      check("seven checks include release", parsed.gates.some((g) => g.id === "release"), true);
+      check("report --json carries events", Array.isArray(parsed.events), true);
+      check("report --json carries tasks", Array.isArray(parsed.tasks), true);
+      check("report --json carries a verdict", ["blocked", "ready", "unknown"].includes(parsed.verdict), true);
+      const anyRed = parsed.gates.some((g) => g.ran && g.ok === false);
+      check("verdict follows the gates", parsed.verdict === "blocked", anyRed);
+      check("blockers are explained", parsed.verdict !== "blocked" || parsed.blockers.length > 0, true);
+      check(
+        "every blocker carries a fix",
+        (parsed.blockers || []).every((b) => typeof b.fix === "string" && b.fix.length > 0),
+        true
+      );
+      check("summary counts commits", typeof parsed.summary.commits, "number");
+
+      check("page has a month calendar", /id="cal"/.test(html), true);
+      check("calendar cells carry dates", /data-day="\d{4}-\d{2}-\d{2}"/.test(html), true);
+      check("calendar marks the default day", /class="[^"]*today/.test(html), true);
+      check("no-js default shows today", new RegExp(`id="day-label">${parsed.today}`).test(html), true);
+      check("calendar can page months", /data-step="-1"/.test(html) && /data-step="1"/.test(html), true);
+      check("page lists tasks as collapsible groups", /<details class="task"/.test(html), true);
+      check("tasks start collapsed", /<details class="task"[^>]*\bopen\b/.test(html), false);
+
       const rep = require("../lib/report.js");
       check("report escapes html", rep.escapeHtml(`<b x="1">&'`), "&lt;b x=&quot;1&quot;&gt;&amp;&#39;");
       check(
         "report escapes the repo name",
-        rep.renderHtml(Object.assign({}, parsed, { repoName: `<img src=x onerror=alert(1)>` })).includes("<img"),
+        rep.renderHtml(Object.assign({}, parsed, { repoName: `<img src=x onerror=alert(1)>` })).includes("<img src=x"),
         false
       );
-      const r2 = run(["report"], repo);
-      check("report defaults to --html", r2.status, 0, (r2.stderr || "").slice(0, 80));
-      check("default report lands in .signoff", fs.existsSync(path.join(repo, ".signoff", "report.html")), true);
-      const hd = run(["report", "-h"], repo);
-      check("report -h exits 0", hd.status, 0);
-      check("report -h names the flag", /--html/.test(hd.stdout), true);
 
-      // v2: the page must carry time (local, never raw ISO) and be queryable per gate,
-      // per day range and per task — without a single interactive control.
-      const j1 = JSON.parse(run(["report", "--json"], repo).stdout);
-      check("report --json carries a timeline", Array.isArray(j1.days), true);
-      check("report --json carries a summary", !!(j1.summary && typeof j1.summary.commits === "number"), true);
-      check("report --json carries work units", Array.isArray(j1.areas), true);
-      check(
-        "work units have counts",
-        (j1.areas || []).every((a) => typeof a.area === "string" && typeof a.commits === "number"),
-        true
-      );
-      check("report dates are local", /\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(html), true);
-      check("timeline groups by day with a weekday", /\d{4}-\d{2}-\d{2} 周/.test(html), true);
-      check("page carries no script", /<script/i.test(html), false);
       const g1 = JSON.parse(run(["report", "--json", "--gate", "p1"], repo).stdout);
-      check("--gate keeps one gate", g1.gates.length, 1);
+      check("--gate keeps one check", g1.gates.length, 1);
       check("--gate is echoed as a filter", g1.filters.gate, "p1");
+      check("--gate accepts release", run(["report", "--json", "--gate", "release"], repo).status, 0);
       check("bad --gate is a usage error", run(["report", "--gate", "p9"], repo).status, 2);
-      check("bad --group is a usage error", run(["report", "--group", "week"], repo).status, 2);
       const oneDay = JSON.parse(run(["report", "--json", "--days", "1"], repo).stdout);
       check("--days narrows the range", oneDay.range.since, oneDay.range.until);
-      const grp = run(["report", "--html", "--group", "commit"], repo);
-      check("--group commit renders", grp.status, 0);
-      const grpHtml = fs.readFileSync(path.join(repo, ".signoff", "report.html"), "utf8");
-      check("page labels the active query", /分组 commit/.test(grpHtml), true);
       const sha = (gitOut(["rev-parse", "--short", "HEAD"], repo) || "").trim();
       const bySha = JSON.parse(run(["report", "--json", "--task", sha], repo).stdout);
       check("--task accepts a sha", bySha.filters.task, sha);
-      const noneTask = JSON.parse(run(["report", "--json", "--task", "zzz-nothing"], repo).stdout);
-      check("--task really filters", noneTask.days.length, 0);
+      check("--task really filters", JSON.parse(run(["report", "--json", "--task", "zzz-nothing"], repo).stdout).events.length, 0);
+
+      const hd = run(["report", "-h"], repo);
+      check("report -h exits 0", hd.status, 0);
+      check("report -h names the flags", /--html/.test(hd.stdout) && /--task/.test(hd.stdout), true);
+      const r2 = run(["report"], repo);
+      check("report defaults to --html", r2.status, 0, (r2.stderr || "").slice(0, 80));
+      check("default report lands in .signoff", fs.existsSync(path.join(repo, ".signoff", "report.html")), true);
     } finally {
       fs.rmSync(base, { recursive: true, force: true });
     }
