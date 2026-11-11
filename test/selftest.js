@@ -1575,6 +1575,14 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("NOTICE ships with the package", fs.existsSync(path.join(ROOT, "NOTICE")), true);
     check("legal boundary is documented", fs.existsSync(path.join(ROOT, "docs", "legal.md")) && fs.existsSync(path.join(ROOT, "docs", "legal.en.md")), true);
     check("release and commercial model is documented", fs.existsSync(path.join(ROOT, "docs", "release-model.md")), true);
+
+    // 首行徽章不能丢：CI 状态、npm 版本、下载量、Node 版本、许可
+    for (const rel of ["README.md", "README.en.md"]) {
+      const head = fs.readFileSync(path.join(ROOT, rel), "utf8").split("\n").slice(0, 8).join("\n");
+      for (const badge of ["npm/v/signoff-cli", "npm/dw/signoff-cli", "node/v/signoff-cli", "workflows/ci.yml/badge.svg", "npm/l/signoff-cli"]) {
+        check(`${rel} keeps the ${badge} badge`, head.includes(badge), true);
+      }
+    }
   }
 
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);

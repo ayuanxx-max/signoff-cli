@@ -1,3 +1,20 @@
+## 4.6.2
+
+**把首行徽章放回去（含 CI 状态）。**
+
+- 4.5.0 重写 README 时丢了首行的五枚徽章：npm 版本、周下载、Node 版本、**CI 状态**、许可。
+  现在中英两个 README 都把徽章放在标题正下方，并加了自测断言——少一枚就红，不会再被一次改写带走。
+- 自测 459 passed / 0 failed（新增十枚徽章断言）。判定逻辑没动。
+
+### English
+
+**The badge row is back, CI status included.**
+
+- The 4.5.0 README rewrite dropped the five badges on the first line: npm version, weekly downloads, Node version,
+  **CI status** and license. Both READMEs now carry them directly under the title, and a self-test assertion fails if
+  any is missing, so another rewrite cannot take them away silently.
+- 459 passed / 0 failed (ten new badge assertions). Verdict logic untouched.
+
 ## 4.6.1
 
 **修一个只在 CI 上暴露的回归：中英同步把 CRLF 检出误判成「没同步」。**

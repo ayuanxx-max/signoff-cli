@@ -1,5 +1,12 @@
 # SignOff
 
+[![npm](https://img.shields.io/npm/v/signoff-cli?color=brightgreen)](https://www.npmjs.com/package/signoff-cli)
+[![downloads](https://img.shields.io/npm/dw/signoff-cli)](https://www.npmjs.com/package/signoff-cli)
+[![node](https://img.shields.io/node/v/signoff-cli)](package.json)
+[![ci](https://github.com/ayuanxx-max/signoff-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/ayuanxx-max/signoff-cli/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/signoff-cli)](LICENSE)
+
+
 > You do not have to change anything. Keep working as usual — this thing guards the process for you.
 
 SignOff turns "done" into **a verdict someone else can re-check**: all seven gates pass, or the commit is stopped

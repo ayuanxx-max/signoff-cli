@@ -1,5 +1,12 @@
 # 落印 / SignOff
 
+[![npm](https://img.shields.io/npm/v/signoff-cli?color=brightgreen)](https://www.npmjs.com/package/signoff-cli)
+[![downloads](https://img.shields.io/npm/dw/signoff-cli)](https://www.npmjs.com/package/signoff-cli)
+[![node](https://img.shields.io/node/v/signoff-cli)](package.json)
+[![ci](https://github.com/ayuanxx-max/signoff-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/ayuanxx-max/signoff-cli/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/signoff-cli)](LICENSE)
+
+
 > 你不需要做什么，照常进行任务，由它来守护这个过程。
 
 SignOff 把「做完了」变成一个**别人能复核的判决**：七道关全过才放行，没过的当场拦住，并给出可执行的修法。
@@ -144,6 +151,13 @@ MIT。见 [LICENSE](LICENSE)。
 ## English
 
 ## SignOff
+
+[![npm](https://img.shields.io/npm/v/signoff-cli?color=brightgreen)](https://www.npmjs.com/package/signoff-cli)
+[![downloads](https://img.shields.io/npm/dw/signoff-cli)](https://www.npmjs.com/package/signoff-cli)
+[![node](https://img.shields.io/node/v/signoff-cli)](package.json)
+[![ci](https://github.com/ayuanxx-max/signoff-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/ayuanxx-max/signoff-cli/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/signoff-cli)](LICENSE)
+
 
 > You do not have to change anything. Keep working as usual — this thing guards the process for you.
 
