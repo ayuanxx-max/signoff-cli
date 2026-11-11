@@ -24,6 +24,8 @@ const PAIRS = [
 const BEGIN = "<!-- EN-BEGIN";
 const MARK = "<!-- EN-END -->";
 
+const normalize = (s) => s.replace(/\r\n/g, "\n");
+
 function demote(md) {
   return md.replace(/^(#{1,5}) /gm, (_, hashes) => `${"#".repeat(Math.min(hashes.length + 1, 6))} `);
 }
@@ -40,8 +42,8 @@ function splitZh(zhText) {
 
 function desired(zhPath, enPath) {
   const enRel = path.relative(root, path.join(root, enPath)).split(path.sep).join("/");
-  const enText = fs.readFileSync(path.join(root, enPath), "utf8");
-  const { head } = splitZh(fs.readFileSync(path.join(root, zhPath), "utf8"));
+  const enText = normalize(fs.readFileSync(path.join(root, enPath), "utf8"));
+  const { head } = splitZh(normalize(fs.readFileSync(path.join(root, zhPath), "utf8")));
   return `${head}\n\n${block(enRel, enText)}\n`;
 }
 
@@ -58,17 +60,17 @@ for (const [zhPath, enPath] of PAIRS) {
   }
   const want = desired(zhPath, enPath);
   const have = fs.readFileSync(zhAbs, "utf8");
+  if (normalize(have).trimEnd() === normalize(want).trimEnd()) continue;
   if (check) {
-    if (have.trimEnd() !== want.trimEnd()) {
+    {
       console.error(`out of sync: ${zhPath} (run node tools/sync-bilingual.mjs)`);
       bad += 1;
     }
     continue;
   }
-  if (have.trimEnd() !== want.trimEnd()) {
-    fs.writeFileSync(zhAbs, want, "utf8");
-    console.log(`synced ${zhPath} <- ${enPath}`);
-  }
+  const eol = have.includes("\r\n") ? "\r\n" : "\n";
+  fs.writeFileSync(zhAbs, want.replace(/\n/g, eol), "utf8");
+  console.log(`synced ${zhPath} <- ${enPath}`);
 }
 
 if (check) {

@@ -1553,7 +1553,7 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("every Chinese doc embeds its English twin", bi.status, 0, String(bi.stderr || "").slice(0, 200));
     for (const rel of ["README.md", "docs/gates.md", "docs/trust.md"]) {
       const text = fs.readFileSync(path.join(ROOT, rel), "utf8");
-      check(`${rel} carries an embedded English section`, /<!-- EN-BEGIN/.test(text) && /^## English$/m.test(text), true);
+      check(`${rel} carries an embedded English section`, /<!-- EN-BEGIN/.test(text) && /^## English\r?$/m.test(text), true);
     }
 
     // 架构图与工作原理图必须留在中英文说明里，且文件真的存在

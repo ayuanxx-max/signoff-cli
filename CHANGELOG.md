@@ -1,3 +1,25 @@
+## 4.6.1
+
+**修一个只在 CI 上暴露的回归：中英同步把 CRLF 检出误判成「没同步」。**
+
+- 4.6.0 引入的 `tools/sync-bilingual.mjs` 假设 `\n` 行尾。Windows runner 的 `core.autocrlf=true` 会把仓库检出成 CRLF，
+  于是自测报 `README.md out of sync`，三个矩阵任务全红（本机因为文件本来就是 LF 而没暴露）。
+  现在比较与写入都与行尾无关：CRLF 检出照常通过，写回时保持该文件原有行尾，不产生 `\r\r\n`。
+- 新增 `.gitattributes`（`* text=auto eol=lf`，图片与压缩包标 binary），仓库不再随检出机器的行尾设置变形。
+- 自测仍是 449 passed / 0 failed；另外用「把 README 转成 CRLF 再跑 `--check`」复现并验证了这次修复。
+
+### English
+
+**Fixes a regression that only showed up on CI: the bilingual sync treated a CRLF checkout as out of sync.**
+
+- The `tools/sync-bilingual.mjs` added in 4.6.0 assumed `\n` line endings. A Windows runner with
+  `core.autocrlf=true` checks the repo out with CRLF, so the self-test reported `README.md out of sync` and all three
+  matrix jobs went red (locally the files were already LF, so it never showed). Comparison and writing are now
+  line-ending agnostic: a CRLF checkout passes, writing keeps the file's existing endings, and no `\r\r\n` is produced.
+- New `.gitattributes` (`* text=auto eol=lf`, binaries marked) so the repository no longer changes shape with the
+  checkout machine's line-ending settings.
+- Still 449 passed / 0 failed, and the fix was reproduced by converting the README to CRLF and running `--check`.
+
 ## 4.6.0
 
 **说明文档中英同页、两张图回到原位；许可与法律声明按全球适用范围做了脱敏；发行与商业化有了可核对的论证。**
