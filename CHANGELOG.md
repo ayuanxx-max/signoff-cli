@@ -1,3 +1,19 @@
+## Unreleased
+
+本机自用，未发布。以下五项只在本仓库检出里生效，
+pm 上的 latest 仍是 4.7.1。
+
+- **p1 反作弊**：与新基线比对，抓「测试被改软」——新增 skip/only、断言被删、阈值被改小；判定路径
+  之外允许声明式豁免（.signoff/integrity-allow.json，理由至少 20 字）。
+- **signoff fix**：只仲裁补丁能不能留。基线必须红、补丁限在 --scope、判定路径不许被它改、
+  改完必须红转绿且反作弊 clean 且无补丁之外的改动，否则整单回滚；判定写 .signoff/fix-log.jsonl。
+- **signoff dispute**：同一复现步骤重复跑。全过=成立(0)，全不过=推翻(1)，时好时坏=不定(3)；
+  证据含每次退出码、耗时、stdout 摘要与环境指纹，--replay 可复核。
+- **signoff review**：把评审绑到 diff 哈希，改一字节即失效；--verify 校验「审过的=要发的」。
+  --by/--model 是自述，工具只保证绑定关系。
+- **signoff patterns**：读 
+uns.log 与账本，把「同一处反复红」聚成模式并排序；--md 导出。
+
 ## 4.7.1
 
 **声明退后，验证上前。**
