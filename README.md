@@ -10,7 +10,7 @@
 > 你不需要做什么，照常进行任务，由它来守护这个过程。
 
 SignOff 把「做完了」变成一个**别人能复核的判决**：七道关全过才放行，没过的当场拦住，并给出可执行的修法。
-纯 Node（>= 20），不联网、不要账号、不装 Python；判决就是一个退出码（`0` 过 / `1` 红 / `2` 用法或环境错）。
+纯 Node（>= 18），不联网、不要账号、不装 Python；判决就是一个退出码（`0` 过 / `1` 红 / `2` 用法或环境错）。
 
 English: [README.en.md](README.en.md)
 
@@ -162,7 +162,7 @@ MIT。见 [LICENSE](LICENSE)。
 > You do not have to change anything. Keep working as usual — this thing guards the process for you.
 
 SignOff turns "done" into **a verdict someone else can re-check**: all seven gates pass, or the commit is stopped
-on the spot with a fix you can act on. Pure Node (>= 20) — no network, no account, no Python. The verdict is an exit
+on the spot with a fix you can act on. Pure Node (>= 18) — no network, no account, no Python. The verdict is an exit
 code: `0` pass, `1` red, `2` usage or environment error.
 
 中文: [README.md](README.md)

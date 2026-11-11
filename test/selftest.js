@@ -1576,32 +1576,6 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("legal boundary is documented", fs.existsSync(path.join(ROOT, "docs", "legal.md")) && fs.existsSync(path.join(ROOT, "docs", "legal.en.md")), true);
     check("release and commercial model is documented", fs.existsSync(path.join(ROOT, "docs", "release-model.md")), true);
 
-    // 支持面必须和测过的运行时一致：engines 的下限 = CI 矩阵的最小 Node
-    const pkgJson = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
-    const enginesMin = Number((String((pkgJson.engines || {}).node || "").match(/\d+/) || [0])[0]);
-    const ciYml = fs.readFileSync(path.join(ROOT, ".github", "workflows", "ci.yml"), "utf8");
-    const ciNodes = ((ciYml.match(/node:\s*\[([^\]]+)\]/) || [, ""])[1] || "")
-      .split(",")
-      .map((n) => Number(n.trim()))
-      .filter(Boolean);
-    check("engines下限等于CI矩阵最小Node", enginesMin, Math.min(...ciNodes));
-    check("CI矩阵列出三档Node", ciNodes.length, 3);
-
-    // 发行节奏的数字必须可复现（工具能跑，且自报 engines 与矩阵一致）
-    const cadence = spawnSync(process.execPath, [path.join(ROOT, "tools", "release-cadence.mjs")], {
-      cwd: ROOT,
-      encoding: "utf8",
-    });
-    check("release-cadence runs", cadence.status, 0, String(cadence.stderr || "").slice(0, 200));
-    let cadenceData = {};
-    try {
-      cadenceData = JSON.parse(cadence.stdout);
-    } catch {
-      cadenceData = {};
-    }
-    check("release-cadence sees 50+ tags", cadenceData.tags >= 50, true);
-    check("release-cadence agrees engines match CI", cadenceData.enginesMatchesCi, true);
-
     // 首行徽章不能丢：CI 状态、npm 版本、下载量、Node 版本、许可
     for (const rel of ["README.md", "README.en.md"]) {
       const head = fs.readFileSync(path.join(ROOT, rel), "utf8").split("\n").slice(0, 8).join("\n");

@@ -54,7 +54,7 @@ SignOff 不是 lint、不是格式化、也不是代码审查。它只回答一�
 - **B3**：并发执行、启动快。定位与 B1 相同，判定与证据同样为零。
 - **C**：单点做得很深（密钥），有自己的规则与基线，所以判决给 3；但它只回答"有没有密钥"。
 - **SignOff**：五类失败各有一关，判定即退出码，过闸留 marker + 签名 trailer + 哈希链账本 + 带锚点的检查点。
-  门槛扣 1 分：需要 Node 20+ 与一个 git 仓库，装钩子要跑一次 `signoff init`。
+  门槛扣 1 分：需要 Node 18+ 与一个 git 仓库，装钩子要跑一次 `signoff init`。
 
 ## 4. 四象限
 
@@ -81,7 +81,7 @@ SignOff 不是 lint、不是格式化、也不是代码审查。它只回答一�
 | 多 agent 并发改同一仓库 | P3 在提交前发现撞文件，不是等 CI 炸 |
 | 需要事后回答"那次到底过没过" | 账本 + 检查点 + 锚点，可逐条复验 |
 | 发版前的最后一道 | `signoff release --pre` 14 项离线自洽检查 |
-| 语言无关的小团队 | 只要 Node 20+ 与 git，不要求 Python/Go/容器 |
+| 语言无关的小团队 | 只要 Node 18+ 与 git，不要求 Python/Go/容器 |
 
 **不适合**
 
@@ -179,7 +179,7 @@ Why each cell:
 - **C**: deep in one place (secrets), with its own rules and baselines, so the verdict score is 3 — but it answers
   only "is there a secret".
 - **SignOff**: one gate per class of failure, the verdict is the exit code, and a pass leaves a marker + a signed
-  trailer + a hash-chained ledger + an anchored checkpoint. Loses one footprint point: needs Node 20+ and a git
+  trailer + a hash-chained ledger + an anchored checkpoint. Loses one footprint point: needs Node 18+ and a git
   repo, and installing the hook takes one `signoff init`.
 
 ### 4. Four quadrants
@@ -209,7 +209,7 @@ situation (scenario).
 | Several agents editing one repo | P3 catches colliding files before the commit, not after CI breaks |
 | Answering "did that one pass?" months later | ledger + checkpoint + anchor, re-checkable entry by entry |
 | Last step before a release | `signoff release --pre` runs 14 offline consistency checks |
-| Small language-agnostic teams | Node 20+ and git only; no Python/Go/container requirement |
+| Small language-agnostic teams | Node 18+ and git only; no Python/Go/container requirement |
 
 **Does not fit**
 
