@@ -419,6 +419,17 @@ signoff release --post   # 发布后：npm latest、注册表 isLatest / package
 - **只需要 Node 18+**：闸门与钩子都是 Node；没有 Python、没有其它解释器也能跑完整五关。
 - **不联网**：除 `git` 与本地解释器外不调用外部服务。
 
+## 七、安全与治理（本仓库自己的）
+
+SignOff 会装钩子、会以你的身份跑命令，所以它自己的边界也要写清楚：
+
+- [`SECURITY.md`](SECURITY.md)：审计状态（**未通过第三方审计**）、漏洞报告渠道、响应时限、范围。
+- [`docs/threat-model.md`](docs/threat-model.md)：信任边界、入口与攻击面、七种攻击（A1–A7）的现状与对应测试、
+  明确不做的四件事（不套命令沙箱、不做运行时纵深、不证明活是真人干的、不防私钥泄露）、外部审计就绪清单。
+- [`docs/ARCH-HEALTH.md`](docs/ARCH-HEALTH.md)：`node tools/arch-health.mjs` 对 `lib/` 做四项体检
+  （无环、基座不反向依赖、不向上依赖入口、超限文件必须登记）；存量债务登记在册，**新增违规才判红**。
+- [`docs/deletion.md`](docs/deletion.md)：删除也要证据（D1–D4），删错一次比慢一次贵得多。
+
 ## English
 
 **Language.** The board follows your system language by default: `signoff report --html --lang en` renders the

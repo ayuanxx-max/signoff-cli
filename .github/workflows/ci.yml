@@ -30,6 +30,17 @@ jobs:
       - name: self-test
         run: node test/selftest.js
 
+  arch:
+    name: arch-health (self-governance)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: arch-health
+        run: node tools/arch-health.mjs
+
   parity:
     name: python parity
     runs-on: ubuntu-latest
