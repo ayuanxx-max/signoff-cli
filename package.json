@@ -22,7 +22,8 @@
     "CHANGELOG.md",
     "LICENSE",
     ".pre-commit-hooks.yaml",
-    "action.yml"
+    "action.yml",
+    "CITATION.cff"
   ],
   "engines": {
     "node": ">=18"
@@ -43,7 +44,12 @@
     "precommit",
     "signoff",
     "gitleaks",
-    "vscode-tasks"
+    "vscode-tasks",
+    "attestation",
+    "provenance",
+    "agent-delivery",
+    "ai-code",
+    "signoff-cli"
   ],
   "scripts": {
     "test": "node test/selftest.js",
@@ -55,5 +61,9 @@
     "type": "git",
     "url": "git+https://github.com/ayuanxx-max/signoff-cli.git"
   },
-  "mcpName": "io.github.ayuanxx-max/signoff-cli"
+  "mcpName": "io.github.ayuanxx-max/signoff-cli",
+  "homepage": "https://github.com/ayuanxx-max/signoff-cli#readme",
+  "bugs": {
+    "url": "https://github.com/ayuanxx-max/signoff-cli/issues"
+  }
 }

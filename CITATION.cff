@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If SignOff helps your work, cite it with these fields."
+title: "SignOff (signoff-cli): five commit-time gates that make an agent's \"done\" provable"
+abstract: >-
+  SignOff is a commit-time verdict CLI for agent-assisted delivery. Five offline gates
+  (tests really ran, coverage level, task queue conflicts, dangerous-action ledger,
+  anti-slop documentation) return an exit code as the verdict, and each passing commit
+  leaves a tamper-evident record (marker, signed trailer, hash-chained ledger, signed
+  checkpoint with a publishable anchor).
+authors:
+  - name: "ayuanxx-max"
+    alias: ayuanxx-max
+version: 4.3.1
+date-released: "2026-11-11"
+repository-code: "https://github.com/ayuanxx-max/signoff-cli"
+url: "https://www.npmjs.com/package/signoff-cli"
+license: MIT
+keywords:
+  - agent
+  - code-review
+  - commit-gate
+  - provenance
+  - attestation
+  - mcp
+  - git-hooks

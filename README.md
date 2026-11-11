@@ -9,6 +9,44 @@
 
 > 签下的那句“做完了”，得自己走过五道关才算数。
 
+[![npm](https://img.shields.io/npm/v/signoff-cli?color=brightgreen)](https://www.npmjs.com/package/signoff-cli)
+[![downloads](https://img.shields.io/npm/dw/signoff-cli)](https://www.npmjs.com/package/signoff-cli)
+[![node](https://img.shields.io/node/v/signoff-cli)](package.json)
+[![ci](https://github.com/ayuanxx-max/signoff-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/ayuanxx-max/signoff-cli/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/signoff-cli)](LICENSE)
+
+**60 秒验证**（任意 git 仓库，不动你的代码）：
+
+```bash
+npm i -g signoff-cli
+cd <你的仓库> && signoff init --no-ci    # 装钩子；不写 CI 配置
+signoff all                              # 五关一次跑完，退出码即判决
+signoff report --json                    # 同样的数据，给脚本/CI
+```
+
+**三种接法**（都不要求你改判定逻辑）：
+
+```yaml
+# 1) GitHub Action
+- uses: ayuanxx-max/signoff-cli@v4
+  with: { args: all }
+```
+
+```yaml
+# 2) pre-commit（.pre-commit-config.yaml）
+repos:
+  - repo: https://github.com/ayuanxx-max/signoff-cli
+    rev: v4.3.1
+    hooks: [{ id: signoff }]
+```
+
+```json
+// 3) MCP 客户端（Claude Desktop / Cursor / DSH）
+{ "mcpServers": { "signoff": { "command": "npx", "args": ["signoff-cli", "mcp"] } } }
+```
+
+字段契约见 [`docs/INTEGRATION-CONTRACT.md`](docs/INTEGRATION-CONTRACT.md)，`signoff report --schema` 可机器校验。
+
 五道关卡，五条命令，退出码即判决；发版另加第六道 `signoff release`（[见文末](#发布闸门signoff-release)）。每一关都对应 agent 交付时的一种失败方式：靠记忆跑测试、把“有开发页”当验证、多个 agent 撞同一文件、危险动作做过就忘、文档里塞空话。SignOff 把这五种失败变成五个可执行的检查。
 
 ```bash

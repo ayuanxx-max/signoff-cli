@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/ayuanxx-max/signoff-cli/docs/report.schema.v1.json",
+  "title": "signoff report --json (v1)",
+  "description": "供下游只读消费。字段按 stability 分级：stable 不改不删；additive 只会新增；experimental 可能变。消费方必须忽略未知字段。",
+  "type": "object",
+  "required": ["version", "generatedAt", "verdict", "gates", "summary"],
+  "properties": {
+    "generatedAt": { "type": "string", "description": "ISO 时间戳", "stability": "stable" },
+    "today": { "type": "string", "description": "YYYY-MM-DD", "stability": "stable" },
+    "version": { "type": "string", "description": "产生这份数据的 signoff 版本", "stability": "stable" },
+    "root": { "type": "string", "description": "仓库绝对路径", "stability": "stable" },
+    "repoName": { "type": "string", "stability": "stable" },
+    "range": { "type": "object", "stability": "additive" },
+    "filters": { "type": "object", "stability": "additive" },
+    "git": { "type": "object", "stability": "additive" },
+    "guard": { "type": "object", "stability": "additive" },
+    "machine": { "type": "object", "stability": "additive" },
+    "config": { "type": "object", "stability": "additive" },
+    "testCommand": { "type": ["string", "null"], "stability": "stable" },
+    "headline": { "type": "string", "stability": "additive" },
+    "verdict": {
+      "type": "object",
+      "description": "判定。退出码语义：0 通过 / 1 有红 / 2 用法或环境错",
+      "required": ["ok"],
+      "properties": {
+        "ok": { "type": "boolean", "stability": "stable" },
+        "red": { "type": "integer", "stability": "stable" },
+        "text": { "type": "string", "stability": "additive" }
+      },
+      "stability": "stable"
+    },
+    "blockers": { "type": "array", "items": { "type": "object" }, "stability": "stable" },
+    "passed": { "type": "array", "items": { "type": "object" }, "stability": "additive" },
+    "gates": {
+      "type": "array",
+      "description": "七项：p1 p2 p3 p4 p5 sec release",
+      "items": {
+        "type": "object",
+        "required": ["id", "ran", "ok"],
+        "properties": {
+          "id": { "type": "string", "enum": ["p1", "p2", "p3", "p4", "p5", "sec", "release"], "stability": "stable" },
+          "label": { "type": "string", "stability": "stable" },
+          "cmd": { "type": "string", "stability": "stable" },
+          "file": { "type": "string", "stability": "additive" },
+          "ran": { "type": "boolean", "stability": "stable" },
+          "ok": { "type": "boolean", "stability": "stable" },
+          "when": { "type": ["string", "null"], "stability": "additive" },
+          "detail": { "type": "string", "stability": "additive" }
+        }
+      },
+      "stability": "stable"
+    },
+    "events": { "type": "array", "items": { "type": "object" }, "stability": "additive" },
+    "health": { "type": "object", "stability": "experimental" },
+    "tasks": { "type": "array", "items": { "type": "object" }, "stability": "additive" },
+    "trend": {
+      "type": "array",
+      "description": "每闸近期通过序列",
+      "items": { "type": "object" },
+      "stability": "additive"
+    },
+    "heat": { "type": "array", "items": { "type": "object" }, "stability": "experimental" },
+    "riskiest": { "type": "array", "items": { "type": "object" }, "stability": "experimental" },
+    "wouldBlock": { "type": "array", "items": { "type": "object" }, "stability": "additive" },
+    "summary": { "type": "object", "stability": "stable" }
+  },
+  "additionalProperties": true
+}
