@@ -1614,6 +1614,21 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     for (const id of ["changelog-version", "citation-version", "git-tag"]) {
       check(`release gate enforces ${id}`, relSrc.includes(`"${id}"`), true);
     }
+    // 中文写坏成 ??? 是真实事故（GitHub About 与两个 release 正文都中过），出现即不可恢复
+    const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      if (e.name === '.git' || e.name === 'node_modules' || e.name === 'diagrams') return [];
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) return walk(full);
+      return /[.](md|js|mjs|json|yml|yaml|cff|txt|svg)$/i.test(e.name) ? [full] : [];
+    });
+    const mojibake = [];
+    for (const file of walk(ROOT)) {
+      const text = fs.readFileSync(file, 'utf8');
+      if (/\uFFFD/.test(text) || /[\u4e00-\u9fff]\?\?/.test(text) || /\?\?[\u4e00-\u9fff]/.test(text)) {
+        mojibake.push(path.relative(ROOT, file));
+      }
+    }
+    check("no tracked text file has lost its Chinese to ? marks", mojibake.join(","), "");
     check("third-party actions are pinned to commit SHAs", /uses: actions\/checkout@[0-9a-f]{40}/.test(fs.readFileSync(path.join(ROOT, ".github", "workflows", "ci.yml"), "utf8")), true);
     check("verification steps are documented", fs.existsSync(path.join(ROOT, "docs", "verify-release.md")), true);
     check("trademark use policy is in the repo", fs.existsSync(path.join(ROOT, "TRADEMARK.md")), true);

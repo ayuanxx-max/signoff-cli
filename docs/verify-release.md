@@ -62,14 +62,20 @@ tag 与 `package.json` 版本不一致是发布流水线里的硬失败条件，
 带 attestation 的构建、能复算的 integrity、能对照的 tag。所以排他这件事，本项目放在这里，
 而不是放在更多的声明里。
 
+
+**5. 写入中文的通道。** GitHub 的 About、Release 正文这类“无处可 diff 的文本”，只能用 UTF-8 写入：
+网页、或 API 传 JSON 时用 UTF-8 字节（ensure_ascii=False）。经 GBK 控制台转一手，中文会变成 ??，
+且不可恢复——仓库 About 与 v4.1.7、v4.1.9 的正文都中过，只能照 CHANGELOG.md 重建。自测里有一道
+
+o tracked text file has lost its Chinese to ? marks，扫的是仓库文件；GitHub 侧靠发布后人工看一眼。
+
 ## English
 
 # Verify this package
 
 Declarations are "I say"; verification is "you can check". This page lists only commands and criteria.
 
-**1. Who built this version (provenance).** From 4.7.1 on, `signoff-cli` on npm is built by
-`.github/workflows/publish.yml` on GitHub Actions with a provenance attestation bound to a specific
+**1. Who built this version (provenance).** From 4.7.1 on, `signoff-cli` on npm is built by`.github/workflows/publish.yml` on GitHub Actions with a provenance attestation bound to a specific
 commit and workflow. Install it in an empty directory and run `npm audit signatures` (it audits
 installed dependencies, not remote ones); expect `1 package has a verified registry signature` and
 `1 package has a verified attestation`. `npm view signoff-cli dist.attestations --json` shows the
@@ -90,3 +96,9 @@ tag/version mismatch means the release path was bypassed.
 **5. Why this page exists.** Copyright symbols, (TM) and NOTICE do not stop anyone from publishing a
 fake `signoff-cli`. Attestations, recomputable integrity and tag/version agreement do. That is where
 exclusivity lives here.
+
+**6. The one channel where Chinese can be destroyed.** GitHub About and Release bodies cannot be
+diffed, so a bad write is permanent. Write them as UTF-8: the web UI, or an API call that sends
+ensure_ascii=False JSON as UTF-8 bytes. Round-tripping through a GBK console turns Chinese into
+??, and there is no way back. Do not publish v4.1.7, and walk the release page before announcing a
+version.
