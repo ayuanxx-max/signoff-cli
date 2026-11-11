@@ -1,3 +1,12 @@
+<p align="center">
+  <img src="assets/brand/signoff-mark.svg" width="132" alt="SignOff">
+</p>
+
+<p align="center">
+  <strong>SignOff</strong><br>
+  <sub>© 2026 SignOff · All rights reserved</sub>
+</p>
+
 # SignOff
 
 [![npm](https://img.shields.io/npm/v/signoff-cli?color=brightgreen)](https://www.npmjs.com/package/signoff-cli)

@@ -1,3 +1,12 @@
+<p align="center">
+  <img src="assets/brand/signoff-mark.svg" width="132" alt="SignOff 落印">
+</p>
+
+<p align="center">
+  <strong>SignOff · 落印</strong><br>
+  <sub>© 2026 SignOff · 保留所有权利</sub>
+</p>
+
 # 落印 / SignOff
 
 [![npm](https://img.shields.io/npm/v/signoff-cli?color=brightgreen)](https://www.npmjs.com/package/signoff-cli)
@@ -149,6 +158,15 @@ MIT。见 [LICENSE](LICENSE)。
 <!-- EN-BEGIN auto-embedded from README.en.md; edit that file and run node tools/sync-bilingual.mjs -->
 
 ## English
+
+<p align="center">
+  <img src="assets/brand/signoff-mark.svg" width="132" alt="SignOff">
+</p>
+
+<p align="center">
+  <strong>SignOff</strong><br>
+  <sub>© 2026 SignOff · All rights reserved</sub>
+</p>
 
 ## SignOff
 

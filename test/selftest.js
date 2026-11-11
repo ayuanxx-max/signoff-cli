@@ -1577,11 +1577,21 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("release and commercial model is documented", fs.existsSync(path.join(ROOT, "docs", "release-model.md")), true);
 
     // 首行徽章不能丢：CI 状态、npm 版本、下载量、Node 版本、许可
+    // 4.6.3 起说明页第一行是居中的标志，徽章紧随标题，所以从标题行开始取窗口。
     for (const rel of ["README.md", "README.en.md"]) {
-      const head = fs.readFileSync(path.join(ROOT, rel), "utf8").split("\n").slice(0, 8).join("\n");
+      const lines = fs.readFileSync(path.join(ROOT, rel), "utf8").split("\n");
+      const top = lines.slice(0, 12).join("\n");
+      const titleAt = lines.findIndex((l) => /^#\s/.test(l));
+      const head = lines.slice(Math.max(0, titleAt), Math.max(0, titleAt) + 8).join("\n");
+      check(`${rel} opens with the centred mark`, top.includes('align="center"') && top.includes("assets/brand/signoff-mark.svg"), true);
+      check(`${rel} puts the text notice under the mark`, /© 2026 SignOff/.test(top), true);
+      check(`${rel} keeps the title above the badges`, titleAt >= 0 && titleAt < 12, true);
       for (const badge of ["npm/v/signoff-cli", "npm/dw/signoff-cli", "node/v/signoff-cli", "workflows/ci.yml/badge.svg", "npm/l/signoff-cli"]) {
         check(`${rel} keeps the ${badge} badge`, head.includes(badge), true);
       }
+    }
+    for (const file of ["signoff-mark.svg", "signoff-mark-indigo.svg", "signoff-mark-1024.png", "signoff-copyright.svg"]) {
+      check(`brand asset ${file} is in the repo`, fs.existsSync(path.join(ROOT, "assets", "brand", file)), true);
     }
   }
 

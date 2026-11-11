@@ -62,16 +62,107 @@
 1. npm 周下载连续四周超过 5 000（现在是约 461/周，差一个数量级）；
 2. 出现三家以上组织明确提出采购、合规或 SLA 诉求，且有预算窗口。
 
-## 8. 版本发行分支：现在的做法
+## 8. 版本与分支：深入论证
 
-| 通道 | 内容 | 谁能用 |
+### 8.1 先看用量落在哪
+
+npm 按版本的最近一周下载，按 minor 聚合（15 个版本有量，合计 3 237）：
+
+| minor | 周下载 | 占比 |
 | --- | --- | --- |
-| `latest`（默认） | 稳定版，每次发版 tag + GitHub Release + npm | 所有人 |
-| `--pre` / 预发布 | 发版前把包装进临时目录跑 `--version` 与 MCP 握手 | 维护者 |
-| 分支 | `master` 即发布分支；功能在短分支上做完即合并，不发长期并行版本 | 维护者 |
+| 4.1.x | 2 282 | 70.5% |
+| 4.0.x | 746 | 23.0% |
+| 0.0.x（远古） | 209 | 6.5% |
+| 4.2 ~ 4.6 | 合计不足 1% | — |
+| `latest`（4.6.2） | 不在前六 | — |
 
-理由：单维护者 + 零运行时依赖，长期并行分支（LTS）带来的成本大于收益；真正的兼容性承诺写在
-`docs/REPORT-CONTRACT.md` 的 `contractVersion` 上，那里才是「谁能依赖什么」的答案。
+关键不是「有人在用」，是「有人停在 4.1」。4.1.x 与 latest 之间隔着 4.2、4.3、4.4、4.5、4.6 五个 minor。
+
+### 8.2 三种解释，先别选
+
+| 解释 | 怎么证伪 | 现状 |
+| --- | --- | --- |
+| lockfile 把版本钉死（`npm ci` 不升级） | 看 `latest` 是否也有量；pin 的人不会去装 latest | latest 无量 → 更像 pin |
+| 镜像 / 爬虫在抓具体版本 | 镜像通常只跟 `latest`，不挑 4.1.9 这种具体版本 | 4.1.9、4.1.1、4.1.2 各有两三百，不像镜像 |
+| 4.2 之后有劝退变化 | 查 4.2.0 的 CHANGELOG 是否标了破坏性 | 73 节里 0 处 `BREAKING`，无法判断 |
+
+三条都不确定，但都指向同一个操作结论：**升级摩擦是主要矛盾**。
+
+### 8.3 这条数据推翻了我上一版的结论
+
+上一版的触发条件写的是「旧 minor 占比连续四周超过 30% → 开维护分支」。现在 4.1.x 一家占 70.5%，按字面已经命中。
+
+命中之后要先问一句：那条线上有什么要修？没有已知安全或数据损坏问题，开分支只是把 4.1 的旧代码再养一遍，
+既不解决升级，也不解决安全。所以阈值本身要修：**占比是必要条件，不是充分条件**。
+
+| 条件 | 内容 | 现在 |
+| --- | --- | --- |
+| A（必要） | 某个旧 minor 连续四周占总下载 30% 以上 | 已满足（4.1.x 70.5%） |
+| B（必要） | 该版本上存在需要回补的修复：安全、数据损坏、A 级缺陷 | 未满足（无已知问题） |
+| 开分支 | A 与 B 同时满足 | 不开 |
+| 只满足 A | 问题在升级路径，不在分支 | 先修 8.4 的三个缺口 |
+
+### 8.4 升级路径的三个缺口
+
+| 缺口 | 现状 | 修法 | 成本 |
+| --- | --- | --- | --- |
+| 破坏性变更不可见 | 73 节 CHANGELOG 里 0 处 `BREAKING` | 每条加 `BREAKING` 标记与迁移步骤 | 写文档，一次性 |
+| 没有「你落后几版」的提示 | `signoff doctor` 只查环境 | 加一条本地版本对比提示（联网可查，离线跳过） | 十几行代码 |
+| 没有一段式迁移说明 | 升级要自己翻 5 个版本的 CHANGELOG | `docs/upgrade.md`：按版本列「会变什么、改哪一行」 | 写文档，一次性 |
+
+这三件事都不产生分支、不增加 CI、不需要账号，但直接作用在 70.5% 那批人身上。
+
+### 8.5 分支的真实成本：按分钟和注意力算
+
+| 项 | 量级 | 说明 |
+| --- | --- | --- |
+| 一次 CI | 中位 1.7 分钟（14 个 job 并行，5 次成功运行采样） | 并行，所以墙钟时间不是主要成本 |
+| 一年多出的 job 次 | 12 次发版 × 14 ≈ 168 | 额度与失败面，不是钱 |
+| 文档 | 中文正文里嵌着英文全文，改一处要同步三处 | 双语文档的固定成本 |
+| CHANGELOG | 两条线各自累加 | 读者要自己判断「我这版修了没」 |
+| 注意力 | 单维护者，多一条线就多一份要记的状态 | 真正稀缺的资源 |
+
+结论：分支不是「付不起」，是「现在付了没用」——它解决的是旧线漏洞，而眼下的问题是升级。
+
+### 8.6 通道：现在加 `snapshot`，不加 `next` / `maintenance`
+
+| 通道 | 命令 | 给谁 | 现在 |
+| --- | --- | --- | --- |
+| `latest` | 已有 | 所有人 | 保持 |
+| `snapshot` | `npm dist-tag add signoff-cli@<ver> snapshot` | 内部镜像、想跟最新绿构建的团队 | 可加，零分支成本 |
+| `next` | 预发布通道 | 想提前验证的团队 | 等有人要 |
+| `maintenance` | 旧 minor 安全修复 | 钉死旧版本的团队 | 等 A+B |
+
+关于 `snapshot` 要说清一件事：dist-tag 是可变的，所以 `signoff-cli@snapshot` 不能当可复现坐标。
+集群侧真要可复现，得钉具体版本号加 `integrity` 哈希，例如
+`npm i signoff-cli@4.6.2 --save-exact`，再把 tarball 与哈希镜像进内部 registry。
+`snapshot` 的作用是「让人知道该钉哪个版本」，不是「替代钉版本」。
+
+### 8.7 如果将来收费，分支才会变成资产
+
+| 形态 | 与分支的关系 | 能不能收回成本 |
+| --- | --- | --- |
+| 免费 latest | 不需要分支 | — |
+| 免费 snapshot | 不需要分支，只要发版流程 | — |
+| 付费「固定版本 + 12 个月修复」 | **需要一条 maintenance 线** | 是：合同期就是承诺期 |
+| 付费托管看板 | 不需要分支，需要服务端 | 与分支无关 |
+
+这是唯一一种「开分支能收回成本」的情形，也是 8.8 里第三个触发条件的来源。
+
+### 8.8 修正后的触发条件
+
+| 条件 | 阈值 | 命中后做什么 |
+| --- | --- | --- |
+| A 用量 | 某个旧 minor 连续四周占总下载 30% 以上 | 修升级路径（8.4 三件事），不开分支 |
+| A + B | 旧的线上有需要回补的安全/数据问题 | 开 maintenance 分支，按 8.5 的成本付 |
+| C 商业 | 一个付费客户要求「固定版本 + 修复窗口」 | 开分支并把承诺写进合同 |
+| D 安全事件 | 一次需要同时修两条线的高危问题 | 先手工双线修，再决定是否制度化 |
+
+### 8.9 复现
+
+回滚 4.7.0 时把 `tools/release-cadence.mjs` 一并撤掉了，脚本本体仍留在历史里：
+`git show d7cee80:tools/release-cadence.mjs > tools/release-cadence.mjs`。
+不跑脚本也能手工复现：`curl https://api.npmjs.org/versions/signoff-cli/last-week`，按 minor 聚合即可。
 
 <!-- EN-BEGIN auto-embedded from docs/release-model.en.md; edit that file and run node tools/sync-bilingual.mjs -->
 
@@ -146,16 +237,111 @@ Re-evaluate when both are true; with only one, keep watching:
 1. weekly npm downloads above 5,000 for four consecutive weeks (today about 461/week — one order of magnitude away);
 2. three or more organisations explicitly ask for procurement, compliance or an SLA, with a budget window.
 
-### 8. Release branches today
+### 8. Version branches: the detailed case
 
-| Channel | Content | Who |
+#### 8.1 Where usage actually sits
+
+npm downloads per version for the last week, aggregated by minor (15 versions have traffic, 3,237 total):
+
+| minor | weekly | share |
 | --- | --- | --- |
-| `latest` (default) | stable release; every release has a tag, a GitHub Release and an npm publish | everyone |
-| `--pre` / prerelease | packs, installs into a temp dir, runs `--version` and an MCP handshake before publishing | maintainers |
-| Branches | `master` is the release branch; features land from short branches, no long-lived parallel versions | maintainers |
+| 4.1.x | 2,282 | 70.5% |
+| 4.0.x | 746 | 23.0% |
+| 0.0.x (ancient) | 209 | 6.5% |
+| 4.2 – 4.6 | under 1% together | — |
+| `latest` (4.6.2) | not in the top six | — |
 
-Reason: a single maintainer with zero runtime dependencies gets more cost than benefit from long-lived LTS branches;
-the real compatibility promise is `contractVersion` in `docs/REPORT-CONTRACT.md`, which is the answer to "what may I
-depend on".
+The point is not that people use it; the point is that people stopped at 4.1. Between 4.1.x and `latest` sit five minors:
+4.2, 4.3, 4.4, 4.5, 4.6.
+
+#### 8.2 Three explanations, no verdict yet
+
+| Explanation | How to disprove it | Status |
+| --- | --- | --- |
+| Lockfiles pin the version (`npm ci` does not upgrade) | see whether `latest` also has traffic; people who pin do not install latest | latest has no traffic → pinning fits |
+| Mirrors or crawlers fetch specific versions | mirrors follow `latest`, they do not pick 4.1.9 | 4.1.9, 4.1.1, 4.1.2 each have hundreds, which mirrors do not do |
+| Something after 4.2 put people off | check whether 4.2.0 is marked breaking in the CHANGELOG | 0 of 73 sections carry `BREAKING`, so it cannot be answered |
+
+None of the three is established, and all three point at the same operational conclusion: **upgrade friction is the main
+problem**.
+
+#### 8.3 The data overturns my previous conclusion
+
+The earlier trigger said: an old minor above 30% for four weeks means open a maintenance branch. 4.1.x alone is at 70.5%,
+so by that sentence the trigger has fired.
+
+The next question is what would be fixed on that line. With no known security or data corruption issue, a branch would
+just keep 4.1's old code on life support: it fixes neither upgrades nor security. So the threshold itself needs fixing:
+**share is necessary, not sufficient**.
+
+| Condition | Content | Today |
+| --- | --- | --- |
+| A (necessary) | an old minor above 30% of downloads for four weeks | met (4.1.x 70.5%) |
+| B (necessary) | a fix that must go back to that version: security, data corruption, A-level defect | not met (nothing known) |
+| Open a branch | A and B together | not now |
+| Only A | the problem is the upgrade path, not branches | fix the three gaps in 8.4 |
+
+#### 8.4 Three gaps in the upgrade path
+
+| Gap | Today | Fix | Cost |
+| --- | --- | --- | --- |
+| Breaking changes are invisible | 0 of 73 CHANGELOG sections carry `BREAKING` | mark each one and add the migration step | docs, one-off |
+| No "you are N minors behind" hint | `signoff doctor` only checks the environment | add a local version comparison (network optional, skipped offline) | a dozen lines |
+| No single migration guide | upgrading means reading five CHANGELOGs | `docs/upgrade.md`: per version, what changes and which line to edit | docs, one-off |
+
+None of these creates a branch, adds CI jobs or needs an account, and each acts directly on the 70.5% group.
+
+#### 8.5 What a branch really costs: minutes and attention
+
+| Item | Size | Note |
+| --- | --- | --- |
+| One CI run | median 1.7 minutes (14 parallel jobs, 5 successful runs sampled) | parallel, so wall time is not the main cost |
+| Extra job runs per year | 12 releases × 14 ≈ 168 | quota and failure surface, not money |
+| Docs | the Chinese body embeds the English text, so one edit touches three places | fixed cost of bilingual docs |
+| CHANGELOG | two lines accumulate | readers must work out whether their version got the fix |
+| Attention | one maintainer, one more line to remember the state of | the scarce resource |
+
+Conclusion: a branch is not unaffordable — it would simply fix the wrong thing today. It patches old-line
+vulnerabilities while the problem is upgrades.
+
+#### 8.6 Channels: add `snapshot`, not `next` / `maintenance`
+
+| Channel | Command | For whom | Now |
+| --- | --- | --- | --- |
+| `latest` | exists | everyone | keep |
+| `snapshot` | `npm dist-tag add signoff-cli@<ver> snapshot` | internal mirrors, teams following the newest green build | can add, no branch cost |
+| `next` | prerelease channel | teams wanting early verification | when someone asks |
+| `maintenance` | security fixes on an old minor | teams pinned to an old version | after A + B |
+
+One thing to be explicit about: a dist-tag is mutable, so `signoff-cli@snapshot` is not a reproducible coordinate. A
+cluster that needs reproducibility should pin the exact version plus `integrity`, e.g.
+`npm i signoff-cli@4.6.2 --save-exact`, then mirror the tarball and its hash into an internal registry. `snapshot` tells
+you which version to pin; it does not replace pinning.
+
+#### 8.7 If it is ever paid, branches turn into an asset
+
+| Shape | Relation to branches | Recovers its cost |
+| --- | --- | --- |
+| Free `latest` | no branch needed | — |
+| Free `snapshot` | no branch needed, only a release routine | — |
+| Paid "pinned version + 12 months of fixes" | **requires a maintenance line** | yes: the contract term is the commitment |
+| Paid hosted board | no branch needed, needs a server | unrelated to branches |
+
+This is the only shape where a branch pays for itself, and it is where condition C in 8.8 comes from.
+
+#### 8.8 Revised triggers
+
+| Condition | Threshold | What to do |
+| --- | --- | --- |
+| A usage | an old minor above 30% of downloads for four weeks | fix the upgrade path (the three items in 8.4), no branch |
+| A + B | that old line has a security or data issue that must be fixed | open a maintenance branch and pay the cost in 8.5 |
+| C commercial | a paying customer asks for "pinned version + fix window" | open the branch and put the promise in the contract |
+| D security event | one high-severity issue needing fixes on two lines | fix both by hand first, then decide whether to formalise |
+
+#### 8.9 Reproducing
+
+The 4.7.0 rollback removed `tools/release-cadence.mjs`; the script itself is still in history:
+`git show d7cee80:tools/release-cadence.mjs > tools/release-cadence.mjs`.
+Without it, `curl https://api.npmjs.org/versions/signoff-cli/last-week` and aggregate by minor.
 
 <!-- EN-END -->
