@@ -1,3 +1,47 @@
+## 4.7.1
+
+**声明退后，验证上前。**
+
+- 发布走 CI：新增 `.github/workflows/publish.yml`，tag 触发、`id-token: write`、`npm publish --provenance`，
+  发布前硬校验 tag 等于 `package.json` 版本；`publishConfig.provenance` 打开，本地裸发布会被拒。
+- 发布闸门补三处：`--pre` 增 `changelog-version`、`citation-version`，`--post` 增 `git-tag`。版本号写在四份
+  文档里就必须四处一致，从此不靠人记。
+- 声明去重：README 不再复制 © 行，只指向 `NOTICE` 与 `TRADEMARK.md`；`©` 只剩两处同步点（`LICENSE`、
+  `NOTICE`）。标志去掉边款——128px 下字高只有 2.73px，读不出的东西不留在图里。
+- 新增 `TRADEMARK.md`（能说什么、不能做什么、标志授权、未注册的事实）与 `docs/verify-release.md`
+  （provenance、integrity、tag 一致性，附处置表）。
+- 供应链收紧：第三方 actions 钉到 commit SHA、CI 不再执行 `@latest`、mcp-publisher 下载加 sha256、
+  `ci`/`signoff` 收窄为只读 token、补 `CODEOWNERS` 与 `dependabot`。
+- 元数据回真：`CITATION.cff` 从 4.3.1 回到本版、`ARCH-HEALTH` 版本、pre-commit 的包名与 rev、
+  `action.yml` 默认版本不再浮动在 `latest`。
+- 包体瘦身：`files` 加 `!docs/diagrams/`，4.3MB 文档配图与 `test/` 不再进包。
+- npm 侧：4.7.0 已 `deprecate`（无 tag、无 changelog、代码已回滚），本版取 4.7.1 以高于它并成为 `latest`。
+- 自测 491 passed / 0 failed。
+
+### English
+
+**Declarations step back; verification steps forward.**
+
+- Publishing moves to CI: a new `.github/workflows/publish.yml` runs on tags with `id-token: write` and
+  `npm publish --provenance`, failing hard unless the tag equals the `package.json` version.
+  `publishConfig.provenance` is on, so a bare local publish is refused.
+- Three new release gates: `changelog-version` and `citation-version` in `--pre`, `git-tag` in `--post`.
+  A version named in four documents must now agree in all four.
+- Declarations deduplicated: the READMEs no longer copy the copyright line and point at `NOTICE` and
+  `TRADEMARK.md` instead; `©` has exactly two places to keep in sync (`LICENSE`, `NOTICE`). The mark
+  lost its side-inscription: at 128px it was 2.73px tall, so nothing readable was lost.
+- New `TRADEMARK.md` (what others may say, must not do, logo permission, the unregistered fact) and
+  `docs/verify-release.md` (provenance, integrity, tag agreement, with a disposition table).
+- Supply chain tightened: third-party actions pinned to commit SHAs, no `@latest` in CI, sha256 check
+  on the mcp-publisher download, read-only default token in `ci`/`signoff`, plus `CODEOWNERS` and
+  `dependabot`.
+- Metadata corrected: `CITATION.cff` moves from 4.3.1 to this version, `ARCH-HEALTH` version,
+  the pre-commit package name and rev, and `action.yml` no longer floats on `latest`.
+- Smaller package: `!docs/diagrams/` keeps 4.3MB of documentation images and `test/` out of the tarball.
+- npm side: 4.7.0 is deprecated (no tag, no changelog, reverted); this release is 4.7.1 to sit above it
+  and become `latest`.
+- 491 passed / 0 failed.
+
 ## 4.6.2
 
 **把首行徽章放回去（含 CI 状态）。**
