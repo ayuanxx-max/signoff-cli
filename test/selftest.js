@@ -1596,6 +1596,9 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       check(`${rel} claims the mark with TM`, /SignOff\u2122/.test(doc), true);
       check(`${rel} never claims a registered mark`, /SignOff\u00ae|\u00ae 2026 SignOff/.test(doc), false);
     }
+    // 中文正文必须写在 EN-BEGIN 之前，否则同步会把附录当英文块覆盖掉
+    const legalHead = fs.readFileSync(path.join(ROOT, "docs", "legal.md"), "utf8").split("<!-- EN-BEGIN")[0];
+    check("legal.md keeps the Chinese trademark appendix", /商标主张/.test(legalHead), true);
     check("trademark plan is documented", fs.existsSync(path.join(ROOT, "docs", "brand-policy.md")) && fs.existsSync(path.join(ROOT, "docs", "brand-policy.en.md")), true);
     check("NOTICE names the placeholder holder", /占位名/.test(fs.readFileSync(path.join(ROOT, "NOTICE"), "utf8")), true);
     for (const file of ["signoff-mark.svg", "signoff-mark-indigo.svg", "signoff-mark-1024.png", "signoff-copyright.svg"]) {

@@ -43,6 +43,11 @@
 - MIT 文本本身不指定管辖法院；本项目不在许可里额外加入排他管辖或仲裁条款，避免与不同法域的强制规定冲突。
 - 采购合同层面的支持、SLA、赔偿上限属于商业合同，不在开源许可里承诺；讨论见 [release-model.md](release-model.md)。
 
+## 附：商标主张与权利主体占位
+
+- 名称标 ™ 只表示主张，未注册不得标 ®；申请标的、类别、官费、时间线与检索步骤见 `docs/brand-policy.md`。
+- 版权主体暂用 `SignOff` 占位，定名后四处同步替换：`LICENSE`、`NOTICE`、两个 `README`、标志边款。
+
 <!-- EN-BEGIN auto-embedded from docs/legal.en.md; edit that file and run node tools/sync-bilingual.mjs -->
 
 ## English
