@@ -1611,7 +1611,7 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     const cited = (fs.readFileSync(path.join(ROOT, "CITATION.cff"), "utf8").match(/^version:\s*"?([0-9.]+)"?\s*$/m) || [])[1];
     check("CITATION version matches package.json", cited, pkgVersion);
     const relSrc = fs.readFileSync(path.join(ROOT, "lib", "release.js"), "utf8");
-    for (const id of ["changelog-version", "citation-version", "git-tag"]) {
+    for (const id of ["changelog-version", "citation-version", "git-tag", "surface-encoding", "npm-desc-encoding"]) {
       check(`release gate enforces ${id}`, relSrc.includes(`"${id}"`), true);
     }
     // 中文写坏成 ??? 是真实事故（GitHub About 与两个 release 正文都中过），出现即不可恢复
