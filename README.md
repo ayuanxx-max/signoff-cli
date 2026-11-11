@@ -28,7 +28,7 @@ signoff report --json                    # 同样的数据，给脚本/CI
 
 ```yaml
 # 1) GitHub Action
-- uses: ayuanxx-max/signoff-cli@v4
+- uses: ayuanxx-max/signoff-cli@v4.4.0
   with: { args: all }
 ```
 
@@ -36,8 +36,8 @@ signoff report --json                    # 同样的数据，给脚本/CI
 # 2) pre-commit（.pre-commit-config.yaml）
 repos:
   - repo: https://github.com/ayuanxx-max/signoff-cli
-    rev: v4.3.1
-    hooks: [{ id: signoff }]
+    rev: v4.4.0
+    hooks: [{ id: signoff-guard }]
 ```
 
 ```json

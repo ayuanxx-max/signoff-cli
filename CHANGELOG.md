@@ -1,3 +1,31 @@
+## 4.4.0
+
+**接口与自治理：下游字段契约、架构体检、威胁模型、贡献度量化。判定逻辑未变。**
+
+- 新增 `signoff report --schema`（`docs/report.schema.v1.json`）：字段分 `stable` / `additive` / `experimental` 三级，
+  下游可机器校验；`docs/INTEGRATION-CONTRACT.md` 写明三个出口与上下游红线。
+- 新增 `tools/arch-health.mjs` + `docs/arch-health-baseline.json`：无环、基座不反向依赖、不向上依赖入口、
+  超限必须登记；只挡基线之外的新增，退出码 1。
+- 新增 `tools/signoff-metrics.mjs` + `docs/metrics-sample.md`：翻案率、返工轮次、跳过率实测
+  （dsh-signoff 61 次提交 / 74 次跑闸 / 7 次红 / 翻案率 42.9% / 返工 2.33 轮）。
+- 新增 `SECURITY.md`（审计状态=未通过第三方审计、披露渠道、响应时限）、`docs/threat-model.md`
+  （A1–A7 攻击与测试位置、4 条非目标、9 项审计就绪清单）、`docs/deletion.md`（D1–D4）。
+- README 顶部：徽章、60 秒验证、GitHub Action / pre-commit / MCP 三种接法；`files[]` 加 `SECURITY.md`、`CITATION.cff`。
+- 行为不变：五关判定、退出码语义（0/1/2）、钩子与账本格式均未改。
+
+### English
+
+**Interfaces and self-governance: a downstream field contract, architecture health, threat model, and
+value metrics. No change to the verdict logic.**
+
+- `signoff report --schema` publishes `docs/report.schema.v1.json` with per-field stability levels;
+  `docs/INTEGRATION-CONTRACT.md` defines the three read-only outlets and the upstream/downstream red lines.
+- `tools/arch-health.mjs` checks cycles, base-module direction, upward imports and oversized files;
+  it fails only on regressions against a registered baseline.
+- `tools/signoff-metrics.mjs` quantifies what an invisible tool actually caught (flip rate, rework rounds, skip rate).
+- `SECURITY.md`, `docs/threat-model.md` (A1–A7, non-goals, audit-ready checklist) and `docs/deletion.md`.
+- Unchanged: the five gates, the exit-code semantics (0/1/2), the hooks and the ledger format.
+
 ## 4.3.1
 
 **修 4.3.0 在英文系统里自测变红。**
