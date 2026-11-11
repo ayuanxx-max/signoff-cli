@@ -8,6 +8,10 @@
 | `src/signoff-1-capability.mmd` | `signoff-1-capability.png` | 由哪些部分组成、判定发生在哪一层、什么会留在仓库里 |
 | `src/signoff-2-market.mmd` | `signoff-2-market.png` | 已出现在哪些市场、哪些等审核、哪些物料备好未提交 |
 | `src/signoff-3-user.mmd` | `signoff-3-user.png` | 用户怎么装怎么用，以及平台/环境差异与已知坑 |
+| `src/signoff-4-flow.mmd` | `signoff-4-flow.png` | 提交到判决再到四层证据的工作原理 |
+| `src/signoff-5-competitors.mmd` | `signoff-5-competitors.png` | 匿名对照：覆盖广度 vs 生态采用度 |
+
+`*-en.png` 与 `*-en.mmd` 是同一张图的英文版，正文用哪一版就跟哪一版对齐。
 
 ## 重新生成
 

@@ -1,7 +1,7 @@
 {
   "name": "signoff-cli",
   "productName": "SignOff",
-  "version": "4.5.0",
+  "version": "4.6.0",
   "description": "SignOff (落印) — five gates that make an agent's \"done\" provable: verify, coverage, queue, ledger, anti-slop.",
   "publishConfig": {
     "access": "public"
@@ -24,7 +24,8 @@
     "LICENSE",
     ".pre-commit-hooks.yaml",
     "action.yml",
-    "CITATION.cff"
+    "CITATION.cff",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=18"

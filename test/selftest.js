@@ -1544,6 +1544,37 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("SKILL.md teaches the guard command", /signoff guard/.test(skill), true);
     const mcpServer = fs.readFileSync(path.join(ROOT, "integrations", "mcp", "server.js"), "utf8");
     check("MCP run tool forwards to guard", /case "signoff_run":[\s\S]{0,80}\["guard"\]/.test(mcpServer), true);
+
+    // 中英同构：中文正文之后必须原样跟着英文全文（源头是 .en.md，工具同步、自测防漂移）
+    const bi = spawnSync(process.execPath, [path.join(ROOT, "tools", "sync-bilingual.mjs"), "--check"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    check("every Chinese doc embeds its English twin", bi.status, 0, String(bi.stderr || "").slice(0, 200));
+    for (const rel of ["README.md", "docs/gates.md", "docs/trust.md"]) {
+      const text = fs.readFileSync(path.join(ROOT, rel), "utf8");
+      check(`${rel} carries an embedded English section`, /<!-- EN-BEGIN/.test(text) && /^## English$/m.test(text), true);
+    }
+
+    // 架构图与工作原理图必须留在中英文说明里，且文件真的存在
+    const zhReadme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+    const enReadme = fs.readFileSync(path.join(ROOT, "README.en.md"), "utf8");
+    for (const name of ["signoff-1-capability.png", "signoff-4-flow.png"]) {
+      check(`README keeps ${name}`, zhReadme.includes(`docs/diagrams/${name}`), true);
+      check(`${name} exists`, fs.existsSync(path.join(ROOT, "docs", "diagrams", name)), true);
+    }
+    for (const name of ["signoff-1-capability-en.png", "signoff-4-flow-en.png"]) {
+      check(`README.en keeps ${name}`, enReadme.includes(`docs/diagrams/${name}`), true);
+      check(`${name} exists`, fs.existsSync(path.join(ROOT, "docs", "diagrams", name)), true);
+    }
+
+    // 许可与法律：著作权人是项目名义，NOTICE 随包，法律边界文档在位
+    const license = fs.readFileSync(path.join(ROOT, "LICENSE"), "utf8");
+    check("LICENSE names the project, not a person", /Copyright \(c\) 2026 SignOff contributors/.test(license), true);
+    check("LICENSE is still MIT", /^MIT License/.test(license) && /THE SOFTWARE IS PROVIDED "AS IS"/.test(license), true);
+    check("NOTICE ships with the package", fs.existsSync(path.join(ROOT, "NOTICE")), true);
+    check("legal boundary is documented", fs.existsSync(path.join(ROOT, "docs", "legal.md")) && fs.existsSync(path.join(ROOT, "docs", "legal.en.md")), true);
+    check("release and commercial model is documented", fs.existsSync(path.join(ROOT, "docs", "release-model.md")), true);
   }
 
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);

@@ -1,3 +1,47 @@
+## 4.6.0
+
+**说明文档中英同页、两张图回到原位；许可与法律声明按全球适用范围做了脱敏；发行与商业化有了可核对的论证。**
+
+- **中英同页**：`README.md` 与六篇 `docs/*.md` 在中文正文之后，原样嵌入对应 `.en.md` 全文（标题降一级，`## English` 一节），
+  仍保留开头的 `English: ….en.md` 指路。英文正文只有一个源头（`.en.md`），由 `tools/sync-bilingual.mjs` 同步，
+  自测用 `--check` 防止两边漂移。
+- **图回到原位**：架构图 `signoff-1-capability.png` 回到「七道关」一节，工作原理图 `signoff-4-flow.png` 回到「看板」一节；
+  英文侧用 `-en.png` 孪生件。`docs/diagrams/README.md` 补上 flow / competitors 两行与英文产物说明。
+- **许可与法律**：`LICENSE` 著作权人改为 `SignOff contributors`（不写个人姓名与邮箱）；新增 `NOTICE`（名字与图标不随 MIT 授权、
+  第三方商标不背书、本机无遥测、按现状提供）；新增 `docs/legal.md` 与英文版，写清 MIT 覆盖什么、不覆盖什么、
+  隐私与数据留在本机、使用者侧的出口管制/行业合规、贡献与管辖口径。`SECURITY.md` 去掉个人邮箱，改走 GitHub 私密通道。
+- **发行与商业化论证**：新增 `docs/release-model.md`，用可核对的数字（npm 月下载 3 237、零运行时依赖、免费钩子层同行）
+  论证团队协作与 AI 集群两类需求、为什么判定本身没有定价空间、如果收费只有「托管看板」与「团队合规包」两种形态，
+  以及重新评估的两个触发条件（周下载连续四周 >5 000、三家以上组织提出采购或 SLA）。
+- 自测 449 passed / 0 failed：新增中英同页、图在位、许可与 NOTICE、法律与发行文档五类断言。
+- 判定逻辑没动。
+
+### English
+
+**Docs are bilingual on one page, both diagrams are back in place, the license and legal notice are de-identified for
+worldwide use, and the release/commercial model now has a checkable argument.**
+
+- **Bilingual on one page**: `README.md` and six `docs/*.md` files now carry the full English text (from the matching
+  `.en.md`, headings demoted, under a `## English` section) right after the Chinese body, while the leading
+  `English: ….en.md` pointer stays. The English text has a single source (`.en.md`), synced by
+  `tools/sync-bilingual.mjs`, and a self-test (`--check`) prevents drift.
+- **Diagrams restored**: the architecture image `signoff-1-capability.png` is back in the gates section and the
+  workflow image `signoff-4-flow.png` back in the board section, with the `-en.png` twins on the English side.
+  `docs/diagrams/README.md` now lists the flow and competitors images and their English twins.
+- **License and legal**: `LICENSE` names `SignOff contributors` instead of a person; a new `NOTICE` states that the
+  name and icons are not part of the MIT grant, that third-party marks imply no endorsement, that the tool runs
+  locally with no telemetry, and that it is provided as is. `docs/legal.md` (with an English twin) covers what MIT
+  does and does not cover, privacy, user-side export-control and sector compliance, contributions, and jurisdiction.
+  `SECURITY.md` drops the personal mailbox in favour of the GitHub private channel.
+- **Release and commercial model**: new `docs/release-model.md` argues, with checkable numbers (3,237 monthly npm
+  downloads, zero runtime dependencies, free hook-layer peers), why teams and AI clusters have a need but the verdict
+  itself has no pricing power, that only a hosted board and a team compliance pack are defensible paid shapes, and what
+  would trigger a re-evaluation (weekly downloads above 5,000 for four weeks; three or more organisations asking for
+  procurement or an SLA).
+- 449 passed / 0 failed, with new assertions for bilingual pages, diagram placement, license and NOTICE, and the legal
+  and release documents.
+- Verdict logic untouched.
+
 ## 4.5.0
 
 **看板一页看全，剩下点开；对外说明重排成中英同构的七段。**

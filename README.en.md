@@ -39,6 +39,8 @@ Once per machine is enough: `signoff ensure` idempotently fills in hooks, config
 The judgement rules live in one place: [docs/gates.en.md](docs/gates.en.md) (中文: [docs/gates.md](docs/gates.md)).
 Ask the same question in the terminal: `signoff explain p1`.
 
+![SignOff architecture: who calls, who judges, where the result lands, what it depends on](docs/diagrams/signoff-1-capability-en.png)
+
 Three red lines are never relaxed in any mode: `--no-verify`, `SIGNOFF_SKIP=1`, and moving a threshold to turn red into green.
 
 ---
@@ -54,6 +56,8 @@ Three red lines are never relaxed in any mode: `--no-verify`, `SIGNOFF_SKIP=1`, 
 - Several repositories: `signoff report --repos a,b` or `signoff report --scan ~/code` — each repo keeps its own verdict.
 - For another machine or another agent: `signoff report --html --mount` writes to `~/.signoff/reports`, which is what
   the panel reads.
+
+![How it works: commit -> guard picks the gates -> verdict -> four layers of evidence](docs/diagrams/signoff-4-flow-en.png)
 
 Platforms and thin shells: one core, several entry points — see [docs/SURFACES.en.md](docs/SURFACES.en.md).
 

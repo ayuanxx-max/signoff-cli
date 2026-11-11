@@ -9,8 +9,8 @@
 
 ## 报告漏洞
 
-- 邮箱：`ayuanxx@163.com`（主题前缀 `[signoff-security]`）
-- 或者用 GitHub Security Advisory（仓库 Security 页 → Report a vulnerability），有私密通道时优先它。
+- 首选 GitHub Security Advisory（仓库 Security 页 → Report a vulnerability）：私密、可留档、能直接挂 CVE。
+- 需要邮件往来时，请在该 Advisory 里提出，维护者会回一个专用地址；仓库与本文件不再公开个人邮箱。
 - 不要在公开 issue 里贴可复现的攻击细节。
 
 响应口径（按收到时间算）：
