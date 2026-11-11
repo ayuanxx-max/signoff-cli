@@ -54,3 +54,10 @@ It is a plain-language note for engineers and procurement, **not legal advice**;
   not collide with mandatory rules in any one legal system.
 - Support, SLA and liability caps belong to a commercial contract, not to the open-source license. See
   [release-model.md](release-model.md).
+
+## Appendix: trademark claim and placeholder holder
+
+- (TM) on the name is a claim only; (R) must not be used before registration. Subjects, classes,
+  fees and timeline are in `docs/brand-policy.en.md`.
+- The copyright holder is the placeholder `SignOff` today. Fix it in four places at once: `LICENSE`,
+  `NOTICE`, both READMEs, and the side-inscription inside the mark.

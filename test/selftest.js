@@ -1590,6 +1590,14 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
         check(`${rel} keeps the ${badge} badge`, head.includes(badge), true);
       }
     }
+    // 商标主张与主体占位：标 ™ 不标 ®，占位名有出处，方案有文档
+    for (const rel of ["README.md", "README.en.md"]) {
+      const doc = fs.readFileSync(path.join(ROOT, rel), "utf8");
+      check(`${rel} claims the mark with TM`, /SignOff\u2122/.test(doc), true);
+      check(`${rel} never claims a registered mark`, /SignOff\u00ae|\u00ae 2026 SignOff/.test(doc), false);
+    }
+    check("trademark plan is documented", fs.existsSync(path.join(ROOT, "docs", "brand-policy.md")) && fs.existsSync(path.join(ROOT, "docs", "brand-policy.en.md")), true);
+    check("NOTICE names the placeholder holder", /占位名/.test(fs.readFileSync(path.join(ROOT, "NOTICE"), "utf8")), true);
     for (const file of ["signoff-mark.svg", "signoff-mark-indigo.svg", "signoff-mark-1024.png", "signoff-copyright.svg"]) {
       check(`brand asset ${file} is in the repo`, fs.existsSync(path.join(ROOT, "assets", "brand", file)), true);
     }

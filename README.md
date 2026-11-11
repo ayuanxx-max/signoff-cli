@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>SignOff · 落印</strong><br>
+  <strong>SignOff™ · 落印™</strong><br>
   <sub>© 2026 SignOff contributors · 代码 MIT 许可，标志与名称除外</sub>
 </p>
 
@@ -164,7 +164,7 @@ MIT。见 [LICENSE](LICENSE)。
 </p>
 
 <p align="center">
-  <strong>SignOff</strong><br>
+  <strong>SignOff™</strong><br>
   <sub>© 2026 SignOff contributors · MIT for the code; logo and name excluded</sub>
 </p>
 

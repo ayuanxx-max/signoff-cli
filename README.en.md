@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>SignOff</strong><br>
+  <strong>SignOff™</strong><br>
   <sub>© 2026 SignOff contributors · MIT for the code; logo and name excluded</sub>
 </p>
 
