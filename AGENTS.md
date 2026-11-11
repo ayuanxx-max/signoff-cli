@@ -4,9 +4,9 @@
 
 ## 先读什么
 
-1. `docs/REPORT-CONTRACT.md` —— 报告页的契约（C1…C10），改 `lib/report.js` / `lib/report-page.js` 前必读。
+1. `docs/REPORT-CONTRACT.md` —— 报告页的契约（C1…C11），改 `lib/report.js` / `lib/report-page.js` 前必读。
 2. `README.md` —— 命令行与闸门语义。
-3. `docs/gates.md` —— P1…P5 的判定细节。
+3. `docs/gates.md` —— 七道关的判定细节（p1…p5、sec、release）。
 
 ## 怎么改
 
@@ -25,5 +25,6 @@ git add -A && git commit # 钩子会跑 p1 + secrets
 
 ## 发布
 
-当前状态：**暂停发布**。版本号、`server.json`、`CHANGELOG.md`、`git tag` 必须一致；
-`signoff report` 的"发布"项会现算这四件事，不一致就是红。
+发布流程：`npm test` → `signoff p5` → `signoff release --pre` → `npm publish` → 打 tag 推送 →
+`signoff release --post`。版本号、`package.json`、`server.json`、`CHANGELOG.md`、`git tag` 必须一致；
+`signoff report` 的「发布」项会现算这几件事，不一致就是红。

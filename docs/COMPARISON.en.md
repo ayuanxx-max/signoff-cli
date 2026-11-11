@@ -94,7 +94,7 @@ situation (scenario).
 | --- | --- |
 | Not a git repository | no hook, and no tree to sign |
 | "Fix it until it is green" | a verdict tool should not be a participant; use a linter/fixer |
-| Runtime sandboxing against hostile commands | container/CI isolation; see the "what we do not do" list in `docs/threat-model.md` |
+| Runtime sandboxing against hostile commands | container/CI isolation; see the "what we do not do" list in `docs/trust.md` |
 | Build orchestration for a huge monorepo | CI matrices and caching; SignOff only decides, it does not build |
 
 ## 6. What changed from 4.3.1 to 4.4.0

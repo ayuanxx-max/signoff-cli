@@ -96,7 +96,7 @@ function callSignoff(argv) {
 function runTool(name, args) {
   switch (name) {
     case "signoff_run": {
-      const argv = ["run"];
+      const argv = ["guard"];
       if (args && args.full) argv.push("--full");
       return callSignoff(argv);
     }

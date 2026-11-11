@@ -1,3 +1,42 @@
+## 4.5.0
+
+**看板一页看全，剩下点开；对外说明重排成中英同构的七段。**
+
+- **DSH 面板**：一个仓库一张卡，列一页数据（判决、过闸率、提交数、组任务数、最近一次跑闸、七关徽章、组任务行），
+  挡路项最多 3 行、组任务补满到 9 行；**只有还没画完时才出现「打开完整页面（还有 N 组）」**，装得下就不显示按钮。
+  只读：不跑关、不写状态、不改阈值；文案跟浏览器语言。面板 1.1.0。
+- **说明文档重排**：`README.md` 与新 `README.en.md` 同为七段（上手 / 七关 / 看板 / 接入 / 匿名对照 / 边界 / 索引）；
+  `docs/gates.md`、`docs/integrations.md`、`docs/trust.md` 按同一骨架重写，各有一份 `.en.md` 孪生件。
+- **删掉过时内容**：`docs/release-notes-4.4.0.md`（CHANGELOG 里已有对应条目）、`docs/metrics-sample.md`（一次性数据样板）、
+  `docs/threat-model.md`（并入 `docs/trust.md`）；`gates.md` 里早已不存在的 `gates/*.py` 路径改成 `lib/p*.js`。
+- **修掉会把人带沟里的说明**：`SKILL.md` 教的 `signoff run` 不存在（改为 `signoff guard` / `signoff all`）；
+  MCP 的 `signoff_run` 工具原本转发给 `signoff run`，现在转发 `signoff guard`（`full: true` → `--full`）。
+- 自测 432 passed / 0 failed：新增面板浅渲染（`test/panel-smoke.js`）、文档英文孪生件、相对链接零断链、
+  SKILL/MCP 口径四类断言。
+- 判定逻辑没动。
+
+### English
+
+**The board fits one page and only then offers more; the published docs are regrouped into the same seven sections
+in both languages.**
+
+- **DSH panel**: one card per repository, one page of data (verdict, pass rate, commits, task groups, last gate run,
+  seven gate badges, task rows). Blockers take at most 3 rows and task rows fill up to 9; **"Open full page (N more)"
+  appears only when something is left over**. Read-only: runs no gate, writes no state, changes no threshold; text
+  follows the browser language. Panel 1.1.0.
+- **Docs regrouped**: `README.md` and the new `README.en.md` share seven sections (start / gates / board /
+  integrations / anonymous comparison / limits / index); `docs/gates.md`, `docs/integrations.md` and
+  `docs/trust.md` were rewritten on the same skeleton, each with an `.en.md` twin.
+- **Stale material removed**: `docs/release-notes-4.4.0.md` (the CHANGELOG has the same entry), `docs/metrics-sample.md`
+  (one-off sample), `docs/threat-model.md` (merged into `docs/trust.md`); the long-gone `gates/*.py` paths in
+  `gates.md` now point at `lib/p*.js`.
+- **Fixed instructions that led people astray**: `SKILL.md` taught `signoff run`, which does not exist (now
+  `signoff guard` / `signoff all`); the MCP `signoff_run` tool forwarded to `signoff run` and now forwards to
+  `signoff guard` (`full: true` → `--full`).
+- 432 passed / 0 failed, with new assertions for the panel smoke render (`test/panel-smoke.js`), English twins,
+  zero broken relative links, and the SKILL/MCP wording.
+- Verdict logic untouched.
+
 ## 4.4.5
 
 **看板按项目名说话：最近一次跑闸、按任务都写成「SignOff 项目更新 4.4.x 版」。**
@@ -139,7 +178,7 @@ per-peer star or download figures.**
   超限必须登记；只挡基线之外的新增，退出码 1。
 - 新增 `tools/signoff-metrics.mjs` + `docs/metrics-sample.md`：翻案率、返工轮次、跳过率实测
   （dsh-signoff 61 次提交 / 74 次跑闸 / 7 次红 / 翻案率 42.9% / 返工 2.33 轮）。
-- 新增 `SECURITY.md`（审计状态=未通过第三方审计、披露渠道、响应时限）、`docs/threat-model.md`
+- 新增 `SECURITY.md`（审计状态=未通过第三方审计、披露渠道、响应时限）、`docs/trust.md`
   （A1–A7 攻击与测试位置、4 条非目标、9 项审计就绪清单）、`docs/deletion.md`（D1–D4）。
 - README 顶部：徽章、60 秒验证、GitHub Action / pre-commit / MCP 三种接法；`files[]` 加 `SECURITY.md`、`CITATION.cff`。
 - 行为不变：五关判定、退出码语义（0/1/2）、钩子与账本格式均未改。
@@ -154,7 +193,7 @@ value metrics. No change to the verdict logic.**
 - `tools/arch-health.mjs` checks cycles, base-module direction, upward imports and oversized files;
   it fails only on regressions against a registered baseline.
 - `tools/signoff-metrics.mjs` quantifies what an invisible tool actually caught (flip rate, rework rounds, skip rate).
-- `SECURITY.md`, `docs/threat-model.md` (A1–A7, non-goals, audit-ready checklist) and `docs/deletion.md`.
+- `SECURITY.md`, `docs/trust.md` (A1–A7, non-goals, audit-ready checklist) and `docs/deletion.md`.
 - Unchanged: the five gates, the exit-code semantics (0/1/2), the hooks and the ledger format.
 
 ## 4.3.1

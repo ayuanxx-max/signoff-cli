@@ -34,11 +34,11 @@
 
 - 使用者自己把 `SIGNOFF_SKIP=1` 或 `--no-verify` 写进流程导致的"没跑闸门"
 - 使用者把私钥提交进仓库
-- 已明确写进文档的能力边界（见 `docs/threat-model.md` 的"不证明什么"）
+- 已明确写进文档的能力边界（见 `docs/trust.md` 的"不证明什么"）
 
 ## 威胁模型
 
-信任边界、攻击面、每条攻击当前的判定与测试位置，见 [`docs/threat-model.md`](docs/threat-model.md)。
+信任边界、攻击面、每条攻击当前的判定与测试位置，见 [`docs/trust.md`](docs/trust.md)。
 
 ## 供应链
 

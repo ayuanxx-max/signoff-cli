@@ -16,6 +16,7 @@ const M = EN
       gates: { p1: "Tests", p2: "Coverage", p3: "Tasks", p4: "Risky actions", p5: "Docs", sec: "Secrets", release: "Release" },
       blocked: "failed", unknown: "unmeasured", ready: "all pass",
       rate: "pass rate", commits: "commits", tasks: "task groups",
+      gated: "gated", unmarked: "unmarked", more: (n) => ` (${n} more)`, lastRun: "last gate run",
       open: "Open full page", fix: "How to fix: ",
       err: "Cannot read the data: run signoff report --html --mount inside the repository, then open this panel in the DSH window (direct access from an external browser is disabled).",
       title: "SignOff board", updated: "updated", none: "no mount records yet",
@@ -28,6 +29,7 @@ const M = EN
       gates: { p1: "测试", p2: "覆盖率", p3: "并发任务", p4: "危险动作", p5: "文档", sec: "密钥", release: "发布" },
       blocked: "未过", unknown: "待测", ready: "全过",
       rate: "过闸率", commits: "提交", tasks: "组任务",
+      gated: "过闸", unmarked: "无标记", more: (n) => `（还有 ${n} 组）`, lastRun: "最近一次跑闸",
       open: "打开完整页面", fix: "怎么修：",
       err: "读不到数据：请确认已在仓库里跑过 signoff report --html --mount，并在 DSH 窗口里打开这个面板（外部浏览器直连被禁用）。",
       title: "SignOff 看板", updated: "更新于", none: "还没有挂载记录",
@@ -71,6 +73,17 @@ const VERDICT = {
       blockers: { margin: "10px 0 0", padding: 0, listStyle: "none" },
       blocker: { padding: "7px 0", borderTop: "1px dashed rgba(128,128,128,.3)", fontSize: 13 },
       fix: { fontSize: 12, opacity: 0.72, marginTop: 3 },
+      lastRun: { marginTop: 10, fontSize: 13.5 },
+      tasks: { marginTop: 10, borderTop: "1px dashed rgba(128,128,128,.3)", paddingTop: 8 },
+      taskRow: { display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap", padding: "3px 0", fontSize: 13 },
+      taskId: {
+        fontFamily: "ui-monospace, Cascadia Mono, Consolas, monospace",
+        fontSize: 11.5,
+        padding: "1px 6px",
+        borderRadius: 5,
+        background: "rgba(128,128,128,.16)",
+      },
+      taskName: { fontWeight: 600 },
       checks: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 },
       check: { fontSize: 11.5, padding: "1px 7px", borderRadius: 6, border: "1px solid rgba(128,128,128,.35)" },
       btn: {
@@ -113,9 +126,33 @@ const VERDICT = {
       );
     }
 
+    // 一页放得下的行数：挡路项最多占 3 行，其余给组任务。超过一页才出现"打开完整页面"。
+    const PAGE_ROWS = 9;
+
+    function TaskRow(props) {
+      const t = props.task;
+      return h(
+        "div",
+        { style: styles.taskRow, "data-signoff": "task" },
+        h("code", { style: styles.taskId }, t.id),
+        h("span", { style: styles.taskName }, t.label),
+        h(
+          "span",
+          { style: styles.meta },
+          `${t.count} ${M.commits} · ${M.gated} ${t.passed}` +
+            (t.rate != null ? ` · ${M.rate} ${t.rate}%` : "") +
+            (t.unmarked ? ` · ${M.unmarked} ${t.unmarked}` : ""),
+        ),
+      );
+    }
+
     function RepoCard(props) {
       const r = props.repo;
       const v = VERDICT[r.verdict] || VERDICT.unknown;
+      const blockers = (r.blockers || []).slice(0, 3);
+      const taskBudget = Math.max(PAGE_ROWS - blockers.length, 3);
+      const rows = (r.taskRows || []).slice(0, taskBudget);
+      const rest = Math.max((r.tasks || 0) - rows.length, 0);
       return h(
         "section",
         { style: styles.card },
@@ -131,27 +168,25 @@ const VERDICT = {
           r.rate != null ? h("span", { style: styles.meta }, `${M.rate} ${r.rate}%`) : null,
           r.commits != null ? h("span", { style: styles.meta }, `${r.commits} ${M.commits}`) : null,
           r.tasks != null ? h("span", { style: styles.meta }, `${r.tasks} ${M.tasks}`) : null,
-          h("span", { style: { flex: 1 } }),
-          h(
-            "button",
-            {
-              style: styles.btn,
-              onClick: () => props.onOpen(r.slug),
-              "data-signoff": "open-page",
-            },
-            M.open,
-          ),
         ),
+        r.lastRun
+          ? h(
+              "div",
+              { style: styles.lastRun, "data-signoff": "last-run" },
+              h("b", null, r.lastRun.label || M.lastRun),
+              h("span", { style: styles.meta }, ` ${r.lastRun.detail || ""}`),
+            )
+          : null,
         h("div", { style: Object.assign({}, styles.meta, { marginTop: 4 }) }, r.root),
-        r.blockers && r.blockers.length
+        blockers.length
           ? h(
               "ul",
               { style: styles.blockers },
-              r.blockers.slice(0, 6).map((b) =>
+              blockers.map((b) =>
                 h(
                   "li",
                   { key: b.id, style: styles.blocker },
-                  h("b", null, `${b.id} · ${b.label || b.title || GATE_NAME[b.id] || ""}`),
+                  h("b", null, `${b.id} · ${b.label || GATE_NAME[b.id] || b.id}`),
                   b.why || b.detail
                     ? h("div", { style: { opacity: 0.8, marginTop: 2 } }, `${b.why ? b.why + " · " : ""}${b.detail || ""}`)
                     : null,
@@ -161,6 +196,18 @@ const VERDICT = {
             )
           : null,
         h(CheckChips, { checks: r.checks }),
+        rows.length ? h("div", { style: styles.tasks }, rows.map((t) => h(TaskRow, { key: t.id, task: t }))) : null,
+        rest > 0
+          ? h(
+              "div",
+              { style: { marginTop: 10 } },
+              h(
+                "button",
+                { style: styles.btn, onClick: () => props.onOpen(r.slug), "data-signoff": "open-page" },
+                `${M.open}${M.more(rest)}`,
+              ),
+            )
+          : null,
       );
     }
 

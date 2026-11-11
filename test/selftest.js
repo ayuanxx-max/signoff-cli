@@ -1491,6 +1491,59 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("arch-health exits clean", ah.status, 0, out.trim().split("\n").slice(-1)[0]);
     check("arch-health reports posix paths", /lib\/report\.js/.test(out) && !/lib\\report\.js/.test(out), true);
     check("arch-health does not mistake lazy requires for cycles", /\[R1\]/.test(out), false);
+    // 面板「一页 + 满页才给完整页面」，用极小的 React 桩真渲染一遍（见 test/panel-smoke.js）
+    const panel = spawnSync(process.execPath, [path.join(ROOT, "test", "panel-smoke.js")], {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: Object.assign({}, process.env, { SIGNOFF_LANG: "zh" }),
+    });
+    let panelOut = {};
+    try {
+      panelOut = JSON.parse(String(panel.stdout || "{}").trim().split("\n").pop());
+    } catch (e) {
+      panelOut = {};
+    }
+    check("panel renders one page then offers the full page", panel.status, 0, String(panel.stderr || "").slice(0, 200));
+    check("panel hides the button when everything fits", panelOut.compact, false);
+
+    // 文档：用户向的五篇都有英文孪生件，README 也有
+    const twins = ["docs/gates.md", "docs/integrations.md", "docs/trust.md", "docs/COMPARISON.md", "docs/SURFACES.md"];
+    for (const rel of twins) {
+      check(`${rel} has an English twin`, fs.existsSync(path.join(ROOT, rel.replace(/\.md$/, ".en.md"))), true);
+    }
+    check("README has an English twin", fs.existsSync(path.join(ROOT, "README.en.md")), true);
+
+    // 文档：相对链接一个都不能断
+    const mdFiles = [];
+    (function walk(dir) {
+      for (const name of fs.readdirSync(dir)) {
+        if (name === "node_modules" || name === ".git" || name === "archive") continue;
+        const abs = path.join(dir, name);
+        const st = fs.statSync(abs);
+        if (st.isDirectory()) walk(abs);
+        else if (name.endsWith(".md")) mdFiles.push(abs);
+      }
+    })(ROOT);
+    const broken = [];
+    for (const file of mdFiles) {
+      const text = fs.readFileSync(file, "utf8");
+      const re = /\]\(([^)\s]+)\)/g;
+      let m;
+      while ((m = re.exec(text))) {
+        const link = m[1];
+        if (/^(https?:|mailto:|#)/.test(link)) continue;
+        const target = path.resolve(path.dirname(file), link.split("#")[0]);
+        if (!fs.existsSync(target)) broken.push(`${path.relative(ROOT, file)} -> ${link}`);
+      }
+    }
+    check("docs have no broken relative links", broken.length, 0, broken.slice(0, 3).join(" | "));
+
+    // agent 侧：装的命令必须真实存在，别把不存在的 `signoff run` 写进 SKILL
+    const skill = fs.readFileSync(path.join(ROOT, "integrations", "skill", "SKILL.md"), "utf8");
+    check("SKILL.md does not teach the removed run command", /signoff run\b/.test(skill), false);
+    check("SKILL.md teaches the guard command", /signoff guard/.test(skill), true);
+    const mcpServer = fs.readFileSync(path.join(ROOT, "integrations", "mcp", "server.js"), "utf8");
+    check("MCP run tool forwards to guard", /case "signoff_run":[\s\S]{0,80}\["guard"\]/.test(mcpServer), true);
   }
 
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);

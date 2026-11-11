@@ -34,7 +34,25 @@ function card(slug, entry, report) {
     blockers: (data.blockers || []).map((b) => ({ id: b.id, label: b.label, why: b.why, detail: b.detail, fix: b.fix })),
     rate: data.health ? data.health.rate : entry.rate ?? null,
     commits: summary.commits ?? null,
+    project: data.project || "",
     tasks: Array.isArray(data.tasks) ? data.tasks.length : null,
+    // 面板只画"一页"：给足一排组任务与一条最近跑闸，剩下的交给完整页面。
+    lastRun: (() => {
+      const mark = (data.events || []).find((e) => e.kind === "mark" && /\u6700\u8fd1\u4e00\u6b21\u8dd1\u95f8/.test(String(e.detail || "")));
+      return mark ? { label: mark.label, detail: mark.detail } : null;
+    })(),
+    taskRows: (Array.isArray(data.tasks) ? data.tasks : []).slice(0, 40).map((t) => ({
+      id: t.id,
+      label: t.label || t.title || t.id,
+      title: t.title || "",
+      count: t.count ?? 0,
+      passed: t.passed ?? 0,
+      rate: t.rate ?? null,
+      risk: !!t.risk,
+      unmarked: t.unmarked ?? 0,
+    })),
+    unmarkedTotal: summary.unmarkedTotal ?? null,
+    since: data.range ? data.range.since : null,
     checks: Array.isArray(data.gates)
       ? data.gates.map((g) => ({ id: g.id, label: g.label, ok: g.ok, detail: g.detail }))
       : [],

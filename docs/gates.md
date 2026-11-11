@@ -1,88 +1,103 @@
-# Gates — SignOff / 落印
+# 七道关：判定与修法
 
-> English: [gates.en.md](gates.en.md)
+> English: [gates.en.md](gates.en.md) · 报告契约：[REPORT-CONTRACT.md](REPORT-CONTRACT.md)
 
-每关一条命令，结果写 `.signoff/pN.json`，退出码 0 通过、1 失败、2 用法或前置条件问题。
+每关一条命令，判决写 `.signoff/pN.json`，退出码 0 过 / 1 红 / 2 用法或环境。全部是 Node 实现
+（`lib/p1.js`…`lib/p5.js`、`lib/guard.js`、`lib/secrets.js`），只要求 Node 18+，没有 Python 版本，也没有降级模式。
 
-## P1 `gates/p1_verify.py`
+## p1 测试
 
-| 参数 | 含义 |
+`signoff p1 [--run CMD]... [--budget SEC] [--install-hook] [--json] [--quiet]`
+
+- 缺省命令：有 `tests/` 用 pytest，否则 `npm test --silent`；`--run` 可重复，按给定顺序跑。
+- `--budget` 是所有命令合计的秒数（默认 180），超时判红；不按「用例少就算过」折中。
+- 结果形如 `{"gate":"p1","ok":true,"elapsedMs":39,"budgetMs":180000,"cases":3}`，用例数从
+  `N passed` / `N tests` / `N checks` 里取最大值。
+- `--install-hook` 写 `.git/hooks/pre-commit`（内容就是 `signoff p1`）。
+
+## p2 覆盖率
+
+`signoff p2 [--min-scenario N] [--min-assertions N] [--strict] [--md FILE] [--json]`
+
+扫描根目录与 `packages/`、`apps/` 下带 `package.json` 或 `verify/` 的目录，按证据强弱分四级：
+
+| 级别 | 判据 |
 | --- | --- |
-| `--run CMD`（可重复） | 要执行的命令；缺省：有 `tests/` 用 `python -m pytest tests -q`，否则 `npm test --silent` |
-| `--budget SEC` | 全部命令合计预算，默认 180 秒 |
-| `--install-hook` | 写 `.git/hooks/pre-commit`，内容为 `exec signoff p1` |
-| `--json` / `--quiet` | 机器可读输出 / 只报错 |
+| `scenario` | `verify/scenarios/*.json` 全部可解析，且至少有一个 `checks` 数组 |
+| `harness` | 只有 `verify/` 下的页面 |
+| `smoke` | 只有 `package.json` |
+| `missing` | 都没有 |
 
-输出：`{"gate":"p1","ok":true,"elapsedMs":39,"budgetMs":180000,"cases":3,...}`。用例数从 `N passed` / `N tests` / `N checks` / `N assertions` 里取最大值。
+`--strict` 让 `harness` / `smoke` / `missing` 一律判红；`--md FILE` 导出覆盖表。
 
-## P2 `gates/p2_coverage.py`
+## p3 并发任务
 
-扫描根目录与 `packages/`、`apps/` 下带 `package.json` 或 `verify/` 的目录。级别：
+`signoff p3 {validate|plan|collect} [--cards DIR] [--changed FILES...] [--json]`
 
-- `scenario`：`verify/scenarios/*.json` 全部可解析且至少一个 `checks` 数组；
-- `harness`：只有 `verify/` 下的页面；
-- `smoke`：只有 `package.json`；
-- `missing`：都没有。
-
-| 参数 | 含义 |
-| --- | --- |
-| `--strict` | 任一目录没到 `scenario` 即失败 |
-| `--min-scenario N` / `--min-assertions N` | 阈值 |
-| `--md FILE` | 写 Markdown 覆盖表 |
-
-## P3 `gates/p3_queue.py`
-
-卡片默认在 `tasks/<id>/card.json`：
+任务卡默认 `tasks/<id>/card.json`：
 
 ```json
-{"id":"t1","goal":"修菜单","scope":["dsh-session-fork-tree/client.js"],"acceptance":["menu 11/11"],"rollback":"v0.9.34"}
+{"id":"t1","goal":"修菜单","scope":["client.js"],"acceptance":["menu 11/11"],"rollback":"v0.9.34"}
 ```
 
 | 子命令 | 行为 |
 | --- | --- |
-| `validate` | 五个字段齐全、id 不重复、scope 为字符串数组 |
-| `plan` | scope 前缀或通配相交的卡不同波，输出 wave 列表 |
-| `collect --changed FILES` | 每个改动文件必须被某张卡认领；同时列出“改了却没交东西”的卡 |
+| `validate` | 五个字段齐全、id 不重复、scope 是字符串数组 |
+| `plan` | scope 前缀或通配相交的卡排进不同波，输出 wave 列表 |
+| `collect --changed` | 每个改动文件都必须被某张卡认领，并列「改了却没交东西」的卡 |
 
-## P4 `gates/p4_ledger.py`
+## p4 危险动作
 
-动作类别固定为 `config` / `profile` / `publish`，账本按仓库隔离：仓库内 `.signoff/audit.log`（非仓库目录退回 `~/.signoff/audit.log`，`SIGNOFF_HOME` 可强制指定）。每条记录带 `repo` 字段，`verify` 只校验本仓库的回滚点。
+`signoff p4 {ask|confirm|verify|checkpoint|anchor|path|export}`
+
+动作类别固定 `config` / `profile` / `publish`。账本按仓库隔离：仓库内 `.signoff/audit.log`，非仓库目录退回
+`~/.signoff/audit.log`（`SIGNOFF_HOME` 可强制指定）。
 
 | 子命令 | 行为 |
 | --- | --- |
 | `ask --action --target [--ttl]` | 发票据，单次使用，默认 600 秒过期 |
 | `confirm --ticket --decision allow\|deny [--detail] [--rollback]` | 消费票据并追加哈希链条目；`deny` 也记账，退出码 1 |
-| `verify` | 复算链（`prev` + 内容哈希），并校验回滚点是存在的 git ref；自由文本回滚点判失败 |
-| `export --out FILE [--format {md,json,csv}]` | 导出账本；md 是表格，json 是记录数组，csv 是一行一条 |
+| `verify [--checkpoint [--anchor LINE]]` | 复算链（`prev` + 内容哈希）、校验回滚点是存在的 git ref |
+| `checkpoint [--no-sign]` | 给当前账本写签名检查点（Merkle 根 + 序号） |
+| `anchor` | 打印一行可对外发布的锚点 |
+| `export --out FILE [--format md\|json\|csv]` | 导出账本，可 `--merge` 多次 |
 
-条目形如 `{"ts":...,"action":"publish","target":"x@1.0.0","detail":"...","rollback":"v1.0.0","decision":"allow","prev":"<sha256>","hash":"<sha256>"}`。
+条目形如 `{"ts":…,"action":"publish","target":"x@1.0.0","rollback":"v1.0.0","decision":"allow","prev":"<sha256>","hash":"<sha256>"}`。
 
-## P5 `gates/p5_slop.py`
+## p5 文档空话
 
-六条规则：`placeholder`（未完成的占位标记：`TODO`、`TBD`、`FIXME`、`待补`、`待定`）、`ai-word`（`赋能`/`闭环`/`抓手`/`颗粒度`/`全链路`…）、`absolute-claim`（`100%`/`零缺陷`/`永不`/`绝对`/`完美`/`彻底`/`极致`/`无缝`）、`empty-adverbs`（一行两个及以上空副词）、`claim-without-number`（`已验证`/`已覆盖`/`全部通过`/`全绿` 所在行没有数字）、缺回滚（仅 P4 使用）。
+`signoff p5 [FILES...] [--pack zh|en|both] [--rules FILE] [--allow RULE] [--json]`
 
-跳过 fenced code 与以 `|` 开头的表格行，避免把示例当空话。`--allow <rule>` 可放行某条规则。
+默认扫 `README.md CHANGELOG.md docs/`。规则：占位标记、AI 套话、只有结论没有数字的断言、空副词堆叠、
+把「做完了」写成口号。跳过 fenced code 与 `|` 开头的表格行。`--allow` 放行单条规则，`--rules` 加载额外词表。
 
-## 自动守护（2.0.0）
+## sec 密钥
 
-`signoff init` 之后，`pre-commit` / `pre-push` / CI 都会调 `signoff guard`：
+`signoff secrets [--staged|--all] [--json]`。默认引擎是内置规则（内置词表 + 高熵检测）；装了 gitleaks 时可用
+`--engine gitleaks` 对拍，两者判决独立。
 
-| 场景 | 实际跑的关 |
+## release 发布
+
+`signoff release --pre|--post`。`--pre` 打包、装进临时目录、跑 `--version`、完成 `mcp` 握手；
+`--post` 核 npm `latest`、注册表 `isLatest` 与 `packages[].version`、README 图链。
+四件事必须一致：`package.json` 版本、`server.json` 版本、`CHANGELOG.md` 顶部条目、git tag。
+
+## 守卫：钩子里实际跑哪几关
+
+`signoff init` 之后，`pre-commit` / `pre-push` / CI 都调 `signoff guard`：
+
+| 场景 | 跑的关 |
 | --- | --- |
-| 暂存的文档（README、docs/ 下） | P5 |
-| 能探到测试命令（package.json 的 test，或 pytest） | P1 |
-| 存在 `verify/scenarios/` | P2 `--strict` |
-| 存在账本（仓库内 `.signoff/audit.log` 或 `~/.signoff/audit.log`） | P4 `verify` |
+| 暂存了 README、`docs/` 下的文件 | p5 |
+| 探到测试命令（`package.json` 的 test，或 pytest） | p1 |
+| 存在 `verify/scenarios/` | p2 `--strict` |
+| 存在账本（仓库内或 `~/.signoff/audit.log`） | p4 `verify` |
+| 暂存内容里有疑似密钥 | sec |
 
-缓存文件 `.signoff/cache.json` 以 `git write-tree` 的结果为键：同一份暂存内容重复提交只判一次。
-`SIGNOFF_SKIP=1` 跳过并写 `.signoff/skips.log`；`git commit --no-verify` 是 git 自身口子，无记录，因此 CI 是不可绕过的边界。
-
-> 自检记录（2026-11-06）：装好 `signoff init` 后，本条修正在 `pre-commit` 里跑过 P1（30 用例）与 P5（3 份文档 0 命中）。
-
-## 运行环境（3.0.0 起）
+`.signoff/cache.json` 以 `git write-tree` 的结果为键：同一份暂存内容重复提交只判一次，所以第二次是「最近一次跑闸」那种毫秒级。
+`SIGNOFF_SKIP=1` 跳过并写 `.signoff/skips.log`；`git commit --no-verify` 不写任何记录——所以 **CI 是唯一不可绕过的边界**。
 
 ## 审计边界
 
-`audit --since-install` 先确认安装点是 HEAD 的祖先；rebase、强推、换克隆后对不上会退 2，用 `signoff init --reset-install` 把边界挪到当前 HEAD。
-
-五关与守卫都是 Node 实现（`lib/p1..p5.js`、`lib/guard.js`），只需要 Node 18+；不再依赖 Python，也没有降级模式。`gates/*.py` 仅作为对拍参考（`npm run parity`）。
+`signoff audit [--range A..B] [--strict] [--since-install]`：默认看全部提交，`--since-install` 只看安装点之后，
+且会先确认安装点是 HEAD 的祖先；rebase、强推、换克隆后对不上会退 2，用 `signoff init --reset-install` 把边界挪到当前 HEAD。

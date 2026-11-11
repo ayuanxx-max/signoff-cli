@@ -81,3 +81,14 @@ signoff report --json | jq '.verdict'          # 结论
 signoff report --schema > report.v1.json       # 字段契约
 signoff mcp                                    # 交给 MCP 客户端
 ```
+
+## 看板面板（4.5.0 起）
+
+面板是报告数据的**只读薄壳**，不跑关、不写状态：
+
+- 一个仓库一张卡：判决、过闸率、提交数、组任务数、最近一次跑闸（label + detail）、七关徽章、组任务行。
+- **一页规则**：挡路项最多占 3 行，组任务补满到 9 行；只有还有没画完的组任务时，才出现
+  「打开完整页面（还有 N 组）」。全部装得下时，按钮不出现。
+- 数据只来自 `signoff report --html --mount` 写出的 `~/.signoff/reports/{index.json,<slug>/report.json}`；
+  路径与 slug 规则由报告侧决定，面板不自己拼。
+- 中英文案跟随浏览器语言，不依赖宿主接口；面板与页面必须说同一件事（同一 `label`、同一判决）。
