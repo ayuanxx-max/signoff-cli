@@ -70,6 +70,9 @@ signoff doctor [--json] [--fix]            why is (or isn't) it guarded? --fix r
 signoff release [--pre|--post] [--json]     does the published artifact actually work?
   signoff audit --since-install             only commits after the install point (refuses
                                              a point that is not an ancestor of HEAD)
+  signoff dispute --claim T --run CMD        settle a disagreement by rerunning it: N times pass,
+                                             refuted if it always fails, exit 3 if it is flaky
+  signoff dispute --replay FILE              re-run a recorded dispute and compare verdicts
   signoff fix --patch FILE [--scope P]...    bounded repair: baseline must be red, patch must be
                                              in scope, result must be red -> green, else rollback
   signoff uninstall [--keep-config] [--all]  remove hooks + CI workflow
@@ -223,6 +226,7 @@ if (cmd === "mcp") {
   return;
 }
 if (cmd === "fix") process.exit(require("../lib/fix.js").run(rest));
+if (cmd === "dispute") process.exit(require("../lib/dispute.js").run(rest));
 if (GATES[cmd]) {
   maybeBootstrap(cmd);
   process.exit(runGate(cmd, rest));

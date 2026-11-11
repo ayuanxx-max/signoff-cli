@@ -1614,6 +1614,58 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     for (const id of ["changelog-version", "citation-version", "git-tag", "surface-encoding", "npm-desc-encoding"]) {
       check(`release gate enforces ${id}`, relSrc.includes(`"${id}"`), true);
     }
+    // 分歧仲裁：复现即证据。结论只由"重复跑"定，不由措辞定
+    const disp = require(path.join(ROOT, "lib", "dispute.js"));
+    check("dispute: all pass supports a claim", disp.classify(3, 0, "pass"), "supported");
+    check("dispute: all fail refutes a claim", disp.classify(0, 3, "pass"), "refuted");
+    check("dispute: mixed runs are unstable, not a win", disp.classify(2, 1, "pass"), "unstable");
+    check("dispute: a claim of failure is supported by failures", disp.classify(0, 3, "fail"), "supported");
+    check("dispute: nothing ran is no evidence", disp.classify(0, 0, "pass"), "no-evidence");
+
+    const dbase = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-dispute-"));
+    const dEnv = { SIGNOFF_NO_MACHINE: "1", SIGNOFF_NO_BOOTSTRAP: "1" };
+    const drepo = path.join(dbase, "repo");
+    fs.mkdirSync(drepo, { recursive: true });
+    git(["init", "-q"], drepo);
+    const dspawn = (args) => run(args, drepo, dEnv);
+
+    // 稳定的失败：主张"它过"被推翻
+    fs.writeFileSync(path.join(drepo, "red.js"), "process.exit(1);\n", "utf8");
+    const refuted = dspawn(["dispute", "--claim", "the suite passes", "--run", "node red.js", "--repeat", "3"]);
+    check("dispute: a stable failure refutes the claim", refuted.status, 1);
+    check("dispute: the refutation is recorded", /evidence \S+\.json/.test(String(refuted.stdout)), true);
+
+    // 稳定通过：主张成立
+    fs.writeFileSync(path.join(drepo, "green.js"), "process.exit(0);\n", "utf8");
+    const supported = dspawn(["dispute", "--claim", "the suite passes", "--run", "node green.js", "--repeat", "3"]);
+    check("dispute: a stable pass supports the claim", supported.status, 0);
+
+    // 时好时坏：既不算成立也不算推翻，单独一格
+    fs.writeFileSync(
+      path.join(drepo, "flaky.js"),
+      "const fs=require('fs');const f='state.txt';const n=fs.existsSync(f)?Number(fs.readFileSync(f,'utf8')):0;fs.writeFileSync(f,String(n+1));process.exit(n%3===0?0:1);\n",
+      "utf8"
+    );
+    const flaky = dspawn(["dispute", "--claim", "the suite passes", "--run", "node flaky.js", "--repeat", "3"]);
+    check("dispute: mixed results exit 3, not a verdict", flaky.status, 3);
+
+    // 没有复现步骤就不仲裁
+    const noRun = dspawn(["dispute", "--claim", "it works"]);
+    check("dispute: no reproducer is a usage error", noRun.status, 2);
+
+    // 证据可以复核：拿记录重跑，结论一致
+    fs.writeFileSync(path.join(drepo, "same.js"), "process.exit(0);\n", "utf8");
+    const rec = dspawn(["dispute", "--claim", "the suite passes", "--run", "node same.js", "--repeat", "2", "--json"]);
+    let recFile = "";
+    try {
+      recFile = JSON.parse(String(rec.stdout)).file;
+    } catch (e) {
+      recFile = "";
+    }
+    check("dispute: --json names the evidence file", recFile.length > 0, true);
+    const rep = recFile ? dspawn(["dispute", "--replay", recFile]) : { status: -1 };
+    check("dispute: replay of a stable verdict agrees", rep.status, 0);
+
     // 有界修复闭环：留下的条件只有四条，四个场景各验一次
     const fixlib = require(path.join(ROOT, "lib", "fix.js"));
     check(

@@ -133,6 +133,26 @@
 
 退出码：`0` 留下，`1` 回滚，`2` 拒绝动手（用法、脏工作区、基线已绿、越界、判定路径）。
 
+## signoff dispute 分歧仲裁
+
+`signoff dispute --claim TEXT --run CMD [--expect pass|fail] [--repeat N] [--budget SEC] [--json]`
+`signoff dispute --replay FILE [--json]`
+
+「它到底过不过」不靠说，靠同一个复现步骤在同一棵树上重复跑。三种结论，都有自己的退出码：
+
+| 重复跑的结果 | 结论 | 退出码 |
+| --- | --- | --- |
+| N 次全过 | 主张成立 | 0 |
+| N 次全不过 | 主张被推翻 | 1 |
+| 过也有、不过也有 | 不定：这个问题还没有可复现的说法 | 3 |
+
+第三种是最常被跳过的格子。它把「时好时坏」从一个形容词变成一个分数（p/N），并在证据里留下每一次的
+退出码、耗时、stdout 摘要哈希与尾部。没有复现步骤（`--run`）或没有说清主张（`--claim`）时直接退出 2；
+总耗时超过 `--budget` 时不硬凑结论，同样退出 2 并说明跑了几次。
+
+证据写到 `.signoff/disputes/<时间>-<id>.json`，含环境指纹（node 版本、平台、架构、git 短哈希、目录）。
+`--replay` 读回记录重跑同样的命令，比对结论：一致退出 0，变了退出 1。
+
 <!-- EN-BEGIN auto-embedded from docs/gates.en.md; edit that file and run node tools/sync-bilingual.mjs -->
 
 ## English
@@ -281,5 +301,28 @@ codes, the anti-tamper verdict, kept or rolled back, and why.
 
 Exit codes: `0` kept, `1` rolled back, `2` refused (usage, dirty tree, already green, out of scope,
 verdict path).
+
+### signoff dispute: reproduction is the evidence
+
+`signoff dispute --claim TEXT --run CMD [--expect pass|fail] [--repeat N] [--budget SEC] [--json]`
+`signoff dispute --replay FILE [--json]`
+
+Whether "it passes" is not settled by argument but by running the same reproducer on the same tree,
+repeatedly. Three outcomes, each with its own exit code:
+
+| Repeated result | Verdict | Exit |
+| --- | --- | --- |
+| passes N of N | the claim holds | 0 |
+| fails N of N | the claim is refuted | 1 |
+| some pass, some fail | unresolved: there is no reproducible claim yet | 3 |
+
+The third row is the one people skip. It turns "flaky" from an adjective into a score (p/N) and keeps
+the exit code, duration, stdout digest and tail of every attempt. No reproducer (`--run`) or no stated
+claim (`--claim`) exits 2; if the total time exceeds `--budget` it refuses to force a verdict, exits 2
+and says how many attempts ran.
+
+Evidence goes to `.signoff/disputes/<time>-<id>.json` with an environment fingerprint (node version,
+platform, arch, git short hash, directory). `--replay` reads a record, reruns the same commands and
+compares verdicts: same exits 0, changed exits 1.
 
 <!-- EN-END -->

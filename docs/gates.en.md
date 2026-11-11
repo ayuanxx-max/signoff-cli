@@ -142,3 +142,26 @@ codes, the anti-tamper verdict, kept or rolled back, and why.
 
 Exit codes: `0` kept, `1` rolled back, `2` refused (usage, dirty tree, already green, out of scope,
 verdict path).
+
+## signoff dispute: reproduction is the evidence
+
+`signoff dispute --claim TEXT --run CMD [--expect pass|fail] [--repeat N] [--budget SEC] [--json]`
+`signoff dispute --replay FILE [--json]`
+
+Whether "it passes" is not settled by argument but by running the same reproducer on the same tree,
+repeatedly. Three outcomes, each with its own exit code:
+
+| Repeated result | Verdict | Exit |
+| --- | --- | --- |
+| passes N of N | the claim holds | 0 |
+| fails N of N | the claim is refuted | 1 |
+| some pass, some fail | unresolved: there is no reproducible claim yet | 3 |
+
+The third row is the one people skip. It turns "flaky" from an adjective into a score (p/N) and keeps
+the exit code, duration, stdout digest and tail of every attempt. No reproducer (`--run`) or no stated
+claim (`--claim`) exits 2; if the total time exceeds `--budget` it refuses to force a verdict, exits 2
+and says how many attempts ran.
+
+Evidence goes to `.signoff/disputes/<time>-<id>.json` with an environment fingerprint (node version,
+platform, arch, git short hash, directory). `--replay` reads a record, reruns the same commands and
+compares verdicts: same exits 0, changed exits 1.
