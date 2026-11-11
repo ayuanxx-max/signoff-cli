@@ -1,3 +1,32 @@
+## 4.4.4
+
+**修 `tools/arch-health.mjs`：Windows 上四条规则一直是空转，Linux CI 却红在第一个环上。**
+
+- `listJs()` 在 Windows 返回 `lib\\report.js`，`requiresOf()` 返回 `lib/report.js`，两边对不上，依赖图整张是空的：
+  本机永远"0 违规、38/40"，CI（Linux）第一次真跑就抛 `comp.join is not a function`。现在两边都规范成 `/`。
+- `requiresOf()` 只认顶层 require。写在函数体里的 require 是惰性的，不构成模块初始化期的环；
+  以前把 `bootstrap.js → guard.js`、`checkpoint.js → p4.js` 这类懒加载判成 R1 环，属于误报。
+- `cycles()` 的返回值是"分量数组的数组"，原来 `for (const [comp] of …)` 把分量拆碎，遇到环就崩；改成整份取用。
+- 基线 `docs/arch-health-baseline.json` 的键同样是反斜杠，导致两个超限文件一直被当成"新增"；键已统一成 `/`。
+- 新增 3 条自测（退出码、路径分隔符、不把懒加载判成环），`npm test` 416 passed / 0 failed。
+- 判定逻辑没动。
+
+### English
+
+**Fixes `tools/arch-health.mjs`: on Windows all four rules were no-ops, while Linux CI went red on the first cycle.**
+
+- `listJs()` returned `lib\\report.js` on Windows while `requiresOf()` returned `lib/report.js`, so the dependency
+  graph was empty: locally it always said "0 violations, 38/40", and CI (Linux) crashed with
+  `comp.join is not a function` on its first real run. Both sides now normalise to `/`.
+- `requiresOf()` only counts top-level requires. A require inside a function body is lazy and cannot form a
+  module-initialisation cycle; previously `bootstrap.js → guard.js` and `checkpoint.js → p4.js` were reported as R1.
+- `cycles()` returns an array of components; `for (const [comp] of …)` split each component apart and crashed on the
+  first cycle. It now takes the component whole.
+- The keys in `docs/arch-health-baseline.json` had the same backslash problem, so the two oversize files were always
+  treated as new; they are normalised too.
+- Three new self-tests (exit code, path separators, lazy requires are not cycles): `npm test` 416 passed / 0 failed.
+- Verdict logic untouched.
+
 ## 4.4.3
 
 **匿名再收紧：对比表与象限图只剩编号，能反推到具体项目的信息都删掉。**

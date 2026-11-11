@@ -30,7 +30,9 @@ function listJs(dir) {
   return fs
     .readdirSync(abs)
     .filter((f) => f.endsWith('.js'))
-    .map((f) => path.join(dir, f));
+    // 统一成 POSIX 分隔符：否则 Windows 上 \u4e0e requiresOf() 返回的 lib/x.js 对不上，
+    // 依赖图为空，所有规则在这台机器上都是空转（Linux CI 才会真的跑起来）。
+    .map((f) => path.join(dir, f).split(path.sep).join('/'));
 }
 
 function readLines(rel) {
@@ -40,10 +42,13 @@ function readLines(rel) {
 function requiresOf(rel) {
   const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
   const out = new Set();
-  const re = /require\(\s*['"](\.[^'"]+)['"]\s*\)/g;
+  // 只认顶层（行首无缩进）的 require：写在函数体里的 require 是惰性的，运行时才加载，
+  // 不构成模块初始化期的环。以前把两者一视同仁，R1 会把正常的懒加载判成环。
+  const re = /^(?:const|let|var)\s+[\w$]+\s*=\s*require\(\s*['"](\.[^'"]+)['"]\s*\)|^require\(\s*['"](\.[^'"]+)['"]\s*\)/gm;
   let m;
   while ((m = re.exec(text))) {
-    const target = path.normalize(path.join(path.dirname(rel), m[1]));
+    const spec = m[1] || m[2];
+    const target = path.normalize(path.join(path.dirname(rel), spec));
     const withExt = target.endsWith('.js') ? target : `${target}.js`;
     out.add(withExt.split(path.sep).join('/'));
   }
@@ -118,7 +123,7 @@ function main(argv) {
   for (const f of all) edges.set(f, requiresOf(f).filter((d) => lines[d] !== undefined));
 
   const violations = [];
-  for (const [comp] of cycles(all, edges)) {
+  for (const comp of cycles(all, edges)) {
     violations.push({ rule: 'R1', detail: `依赖成环：${comp.join(' ↔ ')}` });
   }
 

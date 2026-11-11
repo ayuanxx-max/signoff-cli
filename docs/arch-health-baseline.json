@@ -1,17 +1,17 @@
 {
   "note": "存量债务台账：登记不等于通过，新增违规仍判红",
   "oversize": {
-    "lib\\guard.js": 1232,
-    "lib\\report.js": 1455
+    "lib/guard.js": 1232,
+    "lib/report.js": 1455
   },
   "violations": [
     {
       "rule": "R4",
-      "detail": "新增超限文件 lib\\guard.js（1232 行 > 1200），先登记再拆"
+      "detail": "新增超限文件 lib/guard.js（1232 行 > 1200），先登记再拆"
     },
     {
       "rule": "R4",
-      "detail": "新增超限文件 lib\\report.js（1455 行 > 1200），先登记再拆"
+      "detail": "新增超限文件 lib/report.js（1455 行 > 1200），先登记再拆"
     }
   ]
 }

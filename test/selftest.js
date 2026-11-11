@@ -1458,6 +1458,20 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("different repos still differ", rel.sameRepo("https://github.com/a/b", "https://github.com/a/c"), false);
   }
 
+  // 架构自检必须真的看到依赖：listJs() 以前在 Windows 上产出反斜杠路径，与 requiresOf() 的
+  // lib/x.js 对不上，依赖图整张为空，四条规则在这台机器上空转（Linux CI 才是第一次真跑）。
+  {
+    const ah = spawnSync(process.execPath, [path.join(__dirname, "..", "tools", "arch-health.mjs")], {
+      cwd: path.join(__dirname, ".."),
+      encoding: "utf8",
+      env: { ...process.env, SIGNOFF_LANG: "zh" },
+    });
+    const out = (ah.stdout || "") + (ah.stderr || "");
+    check("arch-health exits clean", ah.status, 0, out.trim().split("\n").slice(-1)[0]);
+    check("arch-health reports posix paths", /lib\/report\.js/.test(out) && !/lib\\report\.js/.test(out), true);
+    check("arch-health does not mistake lazy requires for cycles", /\[R1\]/.test(out), false);
+  }
+
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);
   for (const line of PASS) console.log(`PASS ${line}`);
   for (const line of FAIL) console.log(`FAIL ${line}`);
