@@ -1,3 +1,32 @@
+## 4.4.5
+
+**看板按项目名说话：最近一次跑闸、按任务都写成「SignOff 项目更新 4.4.x 版」。**
+
+- `report --json` 新增顶层 `project`；每组任务新增 `label`：组内最新提交标题里有 `x.y.z` 时写
+  「<项目> 项目更新 <版本> 版」（英文页写 `<project> project update <version>`），没有版本时写「<项目> · <区域>」。
+- 「最近一次跑闸」这个 mark 的 `label` 同样按项目名，`detail` 变成「最近一次跑闸 · 全过 · 0.61s」。
+- 项目名解析：`.signoff/config.json` 的 `project` → `package.json` 的 `productName` / `displayName` / `name`
+  → 仓库目录名，再去掉 `@scope/` 与 `-cli|-app|-mcp|-server` 后缀；本仓库加 `productName: "SignOff"`。
+- `label` 只做展示：`id`、`title`、`--task` 的筛选语义不变，原始区域名仍在 `title` 与页面 meta 里。
+- 契约新增 C11（任务与跑闸按项目名说话）；自测 420 passed / 0 failed，新增 4 条断言。
+- 判定逻辑没动。
+
+### English
+
+**The board speaks in project names: the last gate run and every task group now read "SignOff project update 4.4.x".**
+
+- `report --json` gains a top-level `project`, and every task group gains a `label`: when the newest commit subject
+  in the group contains `x.y.z` it becomes `<project> project update <version>` (Chinese: `<项目> 项目更新 <版本> 版`),
+  otherwise `<project> · <area>`.
+- The "last gate run" mark is labelled the same way, and its detail reads "最近一次跑闸 · 全过 · 0.61s".
+- Project name resolution: `.signoff/config.json` `project` → `package.json` `productName` / `displayName` / `name`
+  → repository directory name, then strip `@scope/` and `-cli|-app|-mcp|-server`; this repo now sets
+  `productName: "SignOff"`.
+- `label` is display-only: `id`, `title` and `--task` filtering keep their meaning, and the original area name stays
+  in `title` and in the page meta.
+- Contract clause C11 added; `npm test` 420 passed / 0 failed with four new assertions.
+- Verdict logic untouched.
+
 ## 4.4.4
 
 **修 `tools/arch-health.mjs`：Windows 上四条规则一直是空转，Linux CI 却红在第一个环上。**

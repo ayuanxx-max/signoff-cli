@@ -1292,6 +1292,27 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       check("release checks the manifests", /清单/.test((parsed.gates.find((g) => g.id === "release") || {}).detail || ""), true);
       check("report --json carries events", Array.isArray(parsed.events), true);
       check("report --json carries tasks", Array.isArray(parsed.tasks), true);
+    check("report names the project", typeof parsed.project === "string" && parsed.project.length > 0, true);
+    check(
+      "every task label starts with the project",
+      parsed.tasks.length === 0 || parsed.tasks.every((t) => String(t.label || "").startsWith(parsed.project)),
+      true,
+      (parsed.tasks[0] || {}).label
+    );
+    const versioned = parsed.tasks.filter((t) => /\d+\.\d+\.\d+/.test(String(t.label || "")));
+    check(
+      "versioned tasks read as a project update",
+      versioned.length === 0 || versioned.every((t) => /\u9879\u76ee\u66f4\u65b0 \d+\.\d+\.\d+ \u7248/.test(t.label)),
+      true,
+      (versioned[0] || {}).label
+    );
+    const marks = (parsed.events || []).filter((e) => e.kind === "mark" && /\u6700\u8fd1\u4e00\u6b21\u8dd1\u95f8/.test(String(e.detail)));
+    check(
+      "last gate run is labelled by project",
+      marks.length === 0 || marks.every((m) => String(m.label).startsWith(parsed.project)),
+      true,
+      (marks[0] || {}).label
+    );
       check("report --json carries a verdict", ["blocked", "ready", "unknown"].includes(parsed.verdict), true);
 
   // 判定措辞：说的是「哪几项没过」，不是「谁准你发」。
