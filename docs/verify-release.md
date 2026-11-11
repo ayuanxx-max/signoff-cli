@@ -68,11 +68,13 @@ tag 与 `package.json` 版本不一致是发布流水线里的硬失败条件，
 
 Declarations are "I say"; verification is "you can check". This page lists only commands and criteria.
 
-**1. Who built this version (provenance).** From 4.6.3 on, `signoff-cli` on npm is built by
+**1. Who built this version (provenance).** From 4.7.1 on, `signoff-cli` on npm is built by
 `.github/workflows/publish.yml` on GitHub Actions with a provenance attestation bound to a specific
-commit and workflow. Run `npm audit signatures signoff-cli`, or `npm view signoff-cli
-dist.attestations --json` and check the workflow path is `.github/workflows/publish.yml`. Versions
-without an attestation (4.6.2 and earlier) were published locally and are not verified builds.
+commit and workflow. Install it in an empty directory and run `npm audit signatures` (it audits
+installed dependencies, not remote ones); expect `1 package has a verified registry signature` and
+`1 package has a verified attestation`. `npm view signoff-cli dist.attestations --json` shows the
+attestation URL too. Versions without an attestation (4.6.2 and earlier) were published locally and
+are not verified builds.
 
 **2. Whether the bytes were altered (integrity).** Compare `npm view signoff-cli@<version>
 dist.integrity` with the `sha512` of the downloaded tarball, base64-encoded.
