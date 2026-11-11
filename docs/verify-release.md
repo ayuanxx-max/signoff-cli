@@ -4,13 +4,16 @@
 
 ## 1. 这个版本由谁构建（provenance）
 
-从 4.6.3 起，npm 上的 `signoff-cli` 由 `.github/workflows/publish.yml` 在 GitHub Actions 上构建并附带
+从 4.7.1 起，npm 上的 `signoff-cli` 由 `.github/workflows/publish.yml` 在 GitHub Actions 上构建并附带
 provenance 证明，绑定到**具体提交**与**具体工作流**。
 
 ```bash
-# npm >= 9.5，需要 npm login（不必是发布者）
-npm audit signatures signoff-cli
-# 期望：签名与 attestation 校验通过，输出包含 registry.npmjs.org 的 sigstore 证明
+# npm audit signatures 校验的是"已安装的依赖"，所以先在一个空目录里装上它
+mkdir sigcheck && cd sigcheck && npm init -y && npm i signoff-cli@4.7.1
+npm audit signatures
+# 期望两行：
+#   1 package has a verified registry signature
+#   1 package has a verified attestation
 ```
 
 逐条查：
