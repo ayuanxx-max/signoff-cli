@@ -473,14 +473,17 @@ SignOff 会装钩子、会以你的身份跑命令，所以它自己的边界也
 同类不是代码审查工具，而是**抢同一个 `pre-commit` 钩子的那一层**（下面的 B1 / B2 / B3）。
 同行一律匿名，规则与 A–F 标记见 [`docs/COMPARISON.md`](docs/COMPARISON.md)；这里只说量级：
 
-| 同行 | 形态 | 采用量级 | 给判决 | 留证据 |
-| --- | --- | --- | --- | --- |
-| B1 | Node 钩子安装器 | 数千万/周 | 否（只传退出码） | 否 |
-| B2 | Python 钩子框架 | 数千万/周 | 半（记录跑没跑） | 否 |
-| B3 | Go 钩子运行器 | 近千万/周 | 否 | 否 |
-| **signoff-cli** | **提交时判定 + 证据** | **数千/周** | **是** | **是** |
+| 同行 | 给判决 | 留证据 |
+| --- | --- | --- |
+| B1 | 否（只传退出码） | 否 |
+| B2 | 半（记录跑没跑） | 否 |
+| B3 | 否 | 否 |
+| **signoff-cli** | **是** | **是** |
 
-![判定可信度 vs 采用规模](https://raw.githubusercontent.com/ayuanxx-max/signoff-cli/master/docs/diagrams/quadrant.png)
+三家同行的采用量在千万级/周以上，本工具是数千/周——差四到五个数量级。具体数字与各家实现细节不写在这里：
+一旦写了实现语言，标记就白做了。
+
+![判定可信度 vs 采用规模](https://raw.githubusercontent.com/ayuanxx-max/signoff-cli/master/docs/diagrams/quadrant.png?v=4.4.3)
 
 SignOff 在**左上**象限：可验但没人用。这是实话——规模差四到五个数量级，选型时若按采用量比，今天不该选它；
 它唯一的理由是你需要那个别人不提供的判决与证据。

@@ -1,3 +1,29 @@
+## 4.4.3
+
+**匿名再收紧：对比表与象限图只剩编号，能反推到具体项目的信息都删掉。**
+
+- 4.4.2 只把名字换成了 B1/B2/B3，但表里还写着"Node 钩子安装器""Python 钩子框架""Go 钩子运行器"、每家精确周下载，
+  象限图的点也带着同样后缀——这些足够反推出具体项目，等于没匿名。
+- 现在：对比表只剩"给判决 / 留证据 / 采用量级"三列，量级只写"千万级/周以上"；象限图四个点只标 `B1` `B2` `B3` `C`；
+  每格理由里的"单二进制""跨语言"这类实现描述一并删掉。
+- README 与两份对比文档里的象限图链接加 `?v=4.4.3`：GitHub 的图片代理会缓存旧图，不换 URL 看到的还是旧版。
+- 行为无变化：判定、退出码 0/1/2、账本与页面结构都没动。
+
+### English
+
+**Anonymity, properly: the comparison table and quadrant keep only labels — anything traceable to a specific
+project is gone.**
+
+- 4.4.2 swapped names for B1/B2/B3 but still said "Node hook installer", "Python hook framework", "Go hook
+  runner" and listed each peer's exact weekly downloads; the quadrant points carried the same suffixes. That is
+  enough to identify every one of them, which defeats the point.
+- Now: the table has three columns — verdict, evidence, adoption magnitude ("tens of millions/week or more"); the
+  four quadrant points are labelled `B1` `B2` `B3` `C`; implementation details such as "single binary" and
+  "cross-language" are removed from the per-cell reasoning.
+- The quadrant links in the README and both comparison docs now carry `?v=4.4.3`, because GitHub's image proxy
+  caches the old file under the old URL.
+- No behaviour change: verdicts, exit codes, ledger format and page structure are untouched.
+
 ## 4.4.2
 
 **对比一律匿名：同行只说类型（A–F），不点名、不列对方的星标与下载数。**

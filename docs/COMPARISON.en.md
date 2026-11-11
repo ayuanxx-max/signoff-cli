@@ -15,13 +15,16 @@ may enter: the hook layer (B1 / B2 / B3). They compete with SignOff for the same
 
 ## 2. Adoption size (magnitudes only)
 
-| Peer | Form | Adoption | Gives a verdict | Keeps evidence |
-| --- | --- | --- | --- | --- |
-| B1 | Node hook installer | tens of millions/week (npm) | no (exit code only) | no |
-| B2 | Python hook framework | tens of millions/week (PyPI) | partial (records that it ran) | no |
-| B3 | Go hook runner | close to ten million/week (npm) | no | no |
-| C | Secret scan (single binary) | tens of thousands of stars | one-gate result | scan report only |
-| **SignOff** | **commit-time verdict + evidence** | **a few thousand/week (npm)** | **yes** | **yes** |
+| Peer | Gives a verdict | Keeps evidence | Adoption |
+| --- | --- | --- | --- |
+| B1 | no (exit code only) | no | tens of millions/week+ |
+| B2 | partial (records that it ran) | no | tens of millions/week+ |
+| B3 | no | no | tens of millions/week+ |
+| C | one-gate result | scan report only | tens of thousands of stars |
+| **SignOff** | **yes** | **yes** | **a few thousand/week** |
+
+The table keeps only checkable behaviour and magnitude: **no implementation language, no package names, no exact
+per-peer numbers.** Anything that can be traced back to a specific project defeats the anonymous labels.
 
 Two things a reader sees immediately:
 
@@ -47,10 +50,9 @@ Why each cell:
 
 - **B1**: installs the hook and calls your command. A non-zero exit blocks the commit; beyond that it neither
   explains nor records anything. Almost no dependencies, one line of config — hence the full footprint score.
-- **B2**: adds a layer of "hook source + version + language environment" management and can run other people's
-  hooks across languages, so coverage and footprint are a notch better. It records *that* it ran, not what the
-  verdict for this commit was.
-- **B3**: parallel execution, single binary, fast. Same position as B1, and the same zero for verdict and evidence.
+- **B2**: adds a layer of "hook source + version + runtime" management and can run hooks supplied by others, so
+  coverage and footprint are a notch better. It records *that* it ran, not what the verdict for this commit was.
+- **B3**: parallel execution, fast start. Same position as B1, and the same zero for verdict and evidence.
 - **C**: deep in one place (secrets), with its own rules and baselines, so the verdict score is 3 — but it answers
   only "is there a secret".
 - **SignOff**: one gate per class of failure, the verdict is the exit code, and a pass leaves a marker + a signed
@@ -59,7 +61,7 @@ Why each cell:
 
 ## 4. Four quadrants
 
-![Verdict trustworthiness vs adoption](https://raw.githubusercontent.com/ayuanxx-max/signoff-cli/master/docs/diagrams/quadrant.png)
+![Verdict trustworthiness vs adoption](https://raw.githubusercontent.com/ayuanxx-max/signoff-cli/master/docs/diagrams/quadrant.png?v=4.4.3)
 
 The horizontal axis is external adoption, the vertical axis is "verdict + evidence". The quadrant names are the
 conclusion:
