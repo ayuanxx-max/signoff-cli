@@ -298,8 +298,8 @@ guard 通过后**自动续签**检查点（同一份账本不重复签，不产�
 
 ### 能力矩阵与匿名竞品（3.15.2）
 
-同一张表看"谁有什么"。竞品按类型匿名（不点名，避免把对比写成广告），对应关系与星标/下载数据
-记录在 [`docs/signoff-positioning-3.15.2.md`](../docs/signoff-positioning-3.15.2.md)。
+同一张表看"谁有什么"。同行按类型匿名（不点名，避免把对比写成广告）：A 平台级、B 钩子层、C 密钥扫描、
+D 文本规则、E 供应链证明、F 覆盖率。**对应关系不公开，也不列对方的星标与下载数**，需要时只写量级。
 
 | 能力 | 落印 | 竞品A 平台级 | 竞品B 钩子框架 | 竞品C 密钥扫描 | 竞品D 文本规则 | 竞品E 供应链证明 | 竞品F 覆盖率 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -470,19 +470,19 @@ SignOff 会装钩子、会以你的身份跑命令，所以它自己的边界也
 
 ## 八、和谁比、用在哪
 
-同类不是代码审查工具，而是**抢同一个 `pre-commit` 钩子的那一层**：husky、pre-commit、lefthook。
-取数时间 2026-11-11（GitHub / npm / PyPI API）：
+同类不是代码审查工具，而是**抢同一个 `pre-commit` 钩子的那一层**（下面的 B1 / B2 / B3）。
+同行一律匿名，规则与 A–F 标记见 [`docs/COMPARISON.md`](docs/COMPARISON.md)；这里只说量级：
 
-| 项目 | 星标 | 周下载 | 给判决 | 留证据 |
+| 同行 | 形态 | 采用量级 | 给判决 | 留证据 |
 | --- | --- | --- | --- | --- |
-| husky | 35,388 | 49,271,405（npm） | 否（只传退出码） | 否 |
-| pre-commit | 15,691 | 35,897,535（PyPI） | 半（记录跑没跑） | 否 |
-| lefthook | 9,019 | 9,576,276（npm） | 否 | 否 |
-| **signoff-cli** | **2** | **3,237** | **是** | **是** |
+| B1 | Node 钩子安装器 | 数千万/周 | 否（只传退出码） | 否 |
+| B2 | Python 钩子框架 | 数千万/周 | 半（记录跑没跑） | 否 |
+| B3 | Go 钩子运行器 | 近千万/周 | 否 | 否 |
+| **signoff-cli** | **提交时判定 + 证据** | **数千/周** | **是** | **是** |
 
 ![判定可信度 vs 采用规模](https://raw.githubusercontent.com/ayuanxx-max/signoff-cli/master/docs/diagrams/quadrant.png)
 
-SignOff 在**左上**象限：可验但没人用。这是实话——规模差四个数量级，选型时若按采用量比，今天不该选它；
+SignOff 在**左上**象限：可验但没人用。这是实话——规模差四到五个数量级，选型时若按采用量比，今天不该选它；
 它唯一的理由是你需要那个别人不提供的判决与证据。
 
 **适合**：agent 参与交付的仓库、多个 agent 并发改同一仓库、需要事后回答"那次到底过没过"、发版前自洽检查。
@@ -574,9 +574,9 @@ reads tolerate a UTF-8 BOM, which Windows editors and `Set-Content -Encoding utf
 
 ### Capabilities and anonymised peers (3.15.2)
 
-One table for "who has what". Peers are anonymised by category so the comparison reads as a table,
-not an advert; the mapping plus star/download figures live in
-[`docs/signoff-positioning-3.15.2.md`](../docs/signoff-positioning-3.15.2.md).
+One table for "who has what". Peers are anonymised by category so the comparison reads as a table, not an
+advert: A platform, B hooks, C secret scan, D prose rules, E supply chain, F coverage. **The mapping is not
+published, and no per-peer star or download figures appear anywhere** — magnitudes at most.
 
 | Capability | SignOff | Peer A platform | Peer B hooks | Peer C secret scan | Peer D text rules | Peer E supply chain | Peer F coverage |
 | --- | --- | --- | --- | --- | --- | --- | --- |

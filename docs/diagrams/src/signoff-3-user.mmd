@@ -19,7 +19,7 @@ flowchart TB
     subgraph T2["2 · 初始化"]
       direction TB
       T2a["signoff init"]
-      T2b["仓库已有 husky 等钩子：加 --chain<br/>否则你的钩子会被顶掉"]
+      T2b["仓库已装别人的钩子（B1 类安装器）：加 --chain<br/>否则你的钩子会被顶掉"]
       T2c["测试命令因机而异：加 --lock-test"]
       T2d["先看会写什么：--dry-run"]
       T2e["不想动 CI：--no-ci"]

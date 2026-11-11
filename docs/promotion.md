@@ -34,7 +34,7 @@ GitHub 的搜索会索引 description、topics、README 正文；topics 为空�
 - **Show HN**：标题不要写 "SignOff — a tool for X"。写结论：
   `Show HN: A git hook that refuses to let an agent say "done" without proof`。
   正文三段：问题（agent 说完成了，凭什么信）、做法（五关 + 账本 + 退出码即判决）、
-  一条真实输出。HN 会问"和 husky/lint-staged 有什么区别"，答案必须一句话说清。
+  一条真实输出。HN 会问"和装钩子的那一层有什么区别"，答案必须一句话说清。
 - **dev.to / r/git**：偏教程，`How to make "done" verifiable in a repo`。
 
 中文：
@@ -46,7 +46,7 @@ GitHub 的搜索会索引 description、topics、README 正文；topics 为空�
 
 不要和 lint 工具比，它们不判"完成"。可用的对比句：
 
-- husky / lefthook：**装钩子**，不决定钩子里跑什么、失败算什么；
+- 钩子层（同行 B1 / B3）：**装钩子**，不决定钩子里跑什么、失败算什么；
 - pre-commit：**跑检查**，不产账本，也没有"这次提交真的过闸门了吗"的审计；
 - SignOff：把"完成"变成一个**可验证的判决**（退出码）+ 一条**可审计的链**（账本）。
 

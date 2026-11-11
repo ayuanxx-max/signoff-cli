@@ -1,3 +1,33 @@
+## 4.4.2
+
+**对比一律匿名：同行只说类型（A–F），不点名、不列对方的星标与下载数。**
+
+- 同一套匿名标记贯穿全部对外文字：A 平台级、B 钩子层（B1/B2/B3）、C 密钥扫描、D 文本规则、E 供应链证明、
+  F 覆盖率。`docs/COMPARISON.md`、`COMPARISON.en.md`、README 第八节、`docs/trust.md`、`docs/promotion.md`
+  全部改用这套标记；采用规模只留量级（"数千万/周""数万 star 级"），不再逐家列数字。
+- 象限图重画：`docs/diagrams/src/quadrant.mmd` 的四个点改成 B1/B2/B3/C；`signoff-3-user*.mmd` 里
+  "仓库已有 husky 等钩子"改成"已装别人的钩子（B1 类安装器）"。
+- 规则写进 `docs/prerequisites.md` 与 `docs/COMPARISON.md` 开头，以后新写的对比照此办理。
+  例外只留给机械标识：`--engine gitleaks` 这类命令行取值、`.pre-commit-config.yaml` 这类文件名，
+  以及"怎么和已有钩子共存"的操作步骤。
+- 行为无变化：判定、退出码 0/1/2、账本格式、页面结构都没动。
+
+### English
+
+**Comparisons are anonymous from here on: peers are labelled by type (A–F), with no vendor names and no
+per-peer star or download figures.**
+
+- One label scheme across every outward-facing text: A platform, B hooks (B1/B2/B3), C secret scan, D prose rules,
+  E supply chain, F coverage. `docs/COMPARISON.md`, `COMPARISON.en.md`, section 8 of the README, `docs/trust.md`
+  and `docs/promotion.md` all use it; adoption is stated as a magnitude ("tens of millions/week") instead of a
+  per-vendor table.
+- Redrawn quadrant: the four points in `docs/diagrams/src/quadrant.mmd` are now B1/B2/B3/C, and
+  `signoff-3-user*.mmd` says "another hook layer (a B1-style installer)" instead of naming one.
+- The rule is recorded in `docs/prerequisites.md` and at the top of `docs/COMPARISON.md`; future comparisons
+  follow it. The only exceptions are mechanical identifiers: CLI values such as `--engine gitleaks`, file names
+  such as `.pre-commit-config.yaml`, and the how-to steps for coexisting with an existing hook.
+- No behaviour change: verdicts, exit codes, ledger format and page structure are untouched.
+
 ## 4.4.1
 
 **只改文档：把 4.4.0 的对比与象限说明带进 npm 页面。判定逻辑与代码未改。**
