@@ -1584,7 +1584,7 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       const titleAt = lines.findIndex((l) => /^#\s/.test(l));
       const head = lines.slice(Math.max(0, titleAt), Math.max(0, titleAt) + 8).join("\n");
       check(`${rel} opens with the centred mark`, top.includes('align="center"') && top.includes("assets/brand/signoff-mark.svg"), true);
-      check(`${rel} puts the text notice under the mark`, /© 2026 SignOff/.test(top), true);
+      check(`${rel} points at the notices instead of duplicating them`, /NOTICE/.test(top) && /TRADEMARK\.md/.test(top), true);
       check(`${rel} keeps the title above the badges`, titleAt >= 0 && titleAt < 12, true);
       for (const badge of ["npm/v/signoff-cli", "npm/dw/signoff-cli", "node/v/signoff-cli", "workflows/ci.yml/badge.svg", "npm/l/signoff-cli"]) {
         check(`${rel} keeps the ${badge} badge`, head.includes(badge), true);
@@ -1599,6 +1599,34 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     // 中文正文必须写在 EN-BEGIN 之前，否则同步会把附录当英文块覆盖掉
     const legalHead = fs.readFileSync(path.join(ROOT, "docs", "legal.md"), "utf8").split("<!-- EN-BEGIN")[0];
     check("legal.md keeps the Chinese trademark appendix", /商标主张/.test(legalHead), true);
+    // 发布可验证：provenance 与 OIDC 是发布流水线的硬要求
+    const pubWf = fs.readFileSync(path.join(ROOT, ".github", "workflows", "publish.yml"), "utf8");
+    check("publish workflow asks npm for provenance", /npm publish --provenance/.test(pubWf), true);
+    check("publish workflow grants id-token for provenance", /id-token: write/.test(pubWf), true);
+    check("publish workflow refuses a tag/version mismatch", /version/.test(pubWf) && /process\.exit\(1\)/.test(pubWf), true);
+    // 版本号出现在四份文档里，必须与 package.json 一致（4.6.2 的 CITATION 曾落后三个版本）
+    const pkgVersion = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).version;
+    const topChangelog = (fs.readFileSync(path.join(ROOT, "CHANGELOG.md"), "utf8").match(/^##\s+v?(\d+\.\d+\.\d+)/m) || [])[1];
+    check("CHANGELOG top matches package.json", topChangelog, pkgVersion);
+    const cited = (fs.readFileSync(path.join(ROOT, "CITATION.cff"), "utf8").match(/^version:\s*"?([0-9.]+)"?\s*$/m) || [])[1];
+    check("CITATION version matches package.json", cited, pkgVersion);
+    const relSrc = fs.readFileSync(path.join(ROOT, "lib", "release.js"), "utf8");
+    for (const id of ["changelog-version", "citation-version", "git-tag"]) {
+      check(`release gate enforces ${id}`, relSrc.includes(`"${id}"`), true);
+    }
+    check("third-party actions are pinned to commit SHAs", /uses: actions\/checkout@[0-9a-f]{40}/.test(fs.readFileSync(path.join(ROOT, ".github", "workflows", "ci.yml"), "utf8")), true);
+    check("verification steps are documented", fs.existsSync(path.join(ROOT, "docs", "verify-release.md")), true);
+    check("trademark use policy is in the repo", fs.existsSync(path.join(ROOT, "TRADEMARK.md")), true);
+    // 标志里不再刻版权：出现年份即说明边款又回来了
+    for (const rel of ["signoff-mark.svg", "signoff-mark-indigo.svg"]) {
+      const svg = fs.readFileSync(path.join(ROOT, "assets", "brand", rel), "utf8");
+      check(`${rel} carries no copyright inscription`, /2026/.test(svg), false);
+    }
+    // 同步点只剩两处：LICENSE 与 NOTICE
+    for (const rel of ["README.md", "README.en.md"]) {
+      const doc = fs.readFileSync(path.join(ROOT, rel), "utf8");
+      check(`${rel} does not duplicate the copyright line`, /© 2026 SignOff/.test(doc), false);
+    }
     check("trademark plan is documented", fs.existsSync(path.join(ROOT, "docs", "brand-policy.md")) && fs.existsSync(path.join(ROOT, "docs", "brand-policy.en.md")), true);
     check("NOTICE names the placeholder holder", /占位名/.test(fs.readFileSync(path.join(ROOT, "NOTICE"), "utf8")), true);
     for (const file of ["signoff-mark.svg", "signoff-mark-indigo.svg", "signoff-mark-1024.png", "signoff-copyright.svg"]) {

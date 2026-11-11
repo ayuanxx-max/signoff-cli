@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>SignOff™</strong><br>
-  <sub>© 2026 SignOff contributors · MIT for the code; logo and name excluded</sub>
+  <sub>MIT for the code · name and mark: see NOTICE and TRADEMARK.md</sub>
 </p>
 
 # SignOff

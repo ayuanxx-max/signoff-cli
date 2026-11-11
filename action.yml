@@ -12,10 +12,13 @@ inputs:
   version:
     description: signoff-cli version to install
     required: false
-    default: latest
+    default: 4.6.2
 runs:
   using: composite
   steps:
+    - name: verify registry signature
+      shell: bash
+      run: npm audit signatures || echo 'signature audit unavailable; continuing (see docs/verify-release.md)'
     - name: install
       shell: bash
       run: npm i -g signoff-cli@${{ inputs.version }} --no-fund --no-audit

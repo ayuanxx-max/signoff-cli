@@ -21,13 +21,16 @@ Copyright (c) 2026 SignOff contributors. Licensed under the MIT License; see LIC
 标志、名称与版权
 - 标志、名称与插图：© 2026 SignOff，保留所有权利，不在 MIT 授权范围内。
 - 名称首次出现处标 ™。这是商标主张，不是注册；本项目未在任何法域完成商标注册，不得写成 ®。
-- 「SignOff」是待定的权利主体占位名，定名后替换 LICENSE、NOTICE、两个 README 与标志边款共四处。
-- 排他申请方案见 docs/brand-policy.md。
+- 「SignOff」是待定的权利主体占位名，定名后只替换两处：LICENSE 与 NOTICE（标志内已不刻 ©）。
+- 名称与标志能怎么用：TRADEMARK.md；排他申请方案：docs/brand-policy.md。
+- 能验证的部分不靠声明：provenance、integrity、tag 与版本的一致性见 docs/verify-release.md。
 
 Marks, name and copyright
 - Logo, name and illustrations: (c) 2026 SignOff, all rights reserved; not covered by the MIT licence.
 - (TM) goes at the first mention of the name. It is a claim, not a registration; no trademark
   registration exists in any jurisdiction, so (R) must not be used.
-- "SignOff" is a placeholder holder. When the name is fixed, replace it in LICENSE, NOTICE, both
-  READMEs and the side-inscription inside the mark.
-- The filing plan lives in docs/brand-policy.md.
+- "SignOff" is a placeholder holder. When the name is fixed, replace it in two places only:
+  LICENSE and NOTICE (the mark no longer carries a side-inscription).
+- What others may do with the name and mark: TRADEMARK.md. Filing plan: docs/brand-policy.md.
+- The part worth verifying is not a claim: provenance, integrity and tag/version agreement are in
+  docs/verify-release.md.

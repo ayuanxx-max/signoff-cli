@@ -1,0 +1,63 @@
+name: publish
+
+# 唯一发布入口：推 tag（v*）或手动触发。目的不是"多一条流水线"，而是让每一次发布都带上
+# provenance 证明——别人能验证这个包确实由本仓库的这次提交、在 GitHub Actions 上构建。
+#
+# 两处硬约束：
+#   1. `id-token: write` 是 provenance 的前提，删了它 npm 会拒绝 `--provenance`。
+#   2. tag 必须等于 package.json 的 version，否则直接失败（不靠人眼）。
+#
+# 更彻底的做法是 npm trusted publishing（OIDC，无长期 token）：在 npmjs.com 的包设置里
+# 绑定本仓库与本文件，然后把下面 NODE_AUTH_TOKEN 整段删掉即可。绑定完成前保留 token 兜底。
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "really publish (leave off to pack only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: gate: self-test
+        run: node test/selftest.js
+
+      - name: gate: docs (p5)
+        run: node bin/signoff.js p5
+
+      - name: gate: tag equals package.json version
+        run: |
+          node -e '
+            const v = require("./package.json").version;
+            const tag = String(process.env.GITHUB_REF_NAME || "").replace(/^v/, "");
+            if (!tag) { console.error("no tag on this ref; refusing to publish"); process.exit(1); }
+            if (v !== tag) { console.error("tag " + tag + " != version " + v); process.exit(1); }
+            console.log("tag ok:", v);
+          '
+
+      - name: gate: tarball contents
+        run: npm pack --dry-run
+
+      - name: publish with provenance
+        if: github.event_name == 'push' || inputs.publish == true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public

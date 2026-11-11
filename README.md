@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>SignOff™ · 落印™</strong><br>
-  <sub>© 2026 SignOff contributors · 代码 MIT 许可，标志与名称除外</sub>
+  <sub>代码 MIT 许可 · 名称与标志见 NOTICE 与 TRADEMARK.md</sub>
 </p>
 
 # 落印 / SignOff
@@ -165,7 +165,7 @@ MIT。见 [LICENSE](LICENSE)。
 
 <p align="center">
   <strong>SignOff™</strong><br>
-  <sub>© 2026 SignOff contributors · MIT for the code; logo and name excluded</sub>
+  <sub>MIT for the code · name and mark: see NOTICE and TRADEMARK.md</sub>
 </p>
 
 ## SignOff

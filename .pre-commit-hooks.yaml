@@ -1,6 +1,6 @@
 # pre-commit hooks: https://pre-commit.com
-#   - repo: https://github.com/ayuanxx-max/signoff-cli  (package @signoff/cli)
-#     rev: v3.15.0
+#   - repo: https://github.com/ayuanxx-max/signoff-cli  (package signoff-cli)
+#     rev: v4.6.2
 #     hooks: [{id: signoff-guard}]
 - id: signoff-guard
   name: signoff guard (five gates)

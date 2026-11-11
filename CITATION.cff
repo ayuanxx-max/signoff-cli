@@ -10,7 +10,7 @@ abstract: >-
 authors:
   - name: "ayuanxx-max"
     alias: ayuanxx-max
-version: 4.3.1
+version: 4.6.2
 date-released: "2026-11-11"
 repository-code: "https://github.com/ayuanxx-max/signoff-cli"
 url: "https://www.npmjs.com/package/signoff-cli"
