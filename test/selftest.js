@@ -1614,6 +1614,80 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     for (const id of ["changelog-version", "citation-version", "git-tag", "surface-encoding", "npm-desc-encoding"]) {
       check(`release gate enforces ${id}`, relSrc.includes(`"${id}"`), true);
     }
+    // 有界修复闭环：留下的条件只有四条，四个场景各验一次
+    const fixlib = require(path.join(ROOT, "lib", "fix.js"));
+    check(
+      "fix: a unified diff names its files",
+      fixlib.parsePatch("diff --git a/a.js b/a.js\n--- a/a.js\n+++ b/a.js\n@@ -1 +1 @@\n-x\n+y\n").join(","),
+      "a.js"
+    );
+    check("fix: the verdict path is refused", fixlib.denied(["bin/signoff.js"]).length, 1);
+    check("fix: a normal file is allowed", fixlib.denied(["lib/report.js"]).length, 0);
+    check("fix: out-of-scope files are named", fixlib.outOfScope(["lib/a.js", "docs/b.md"], ["lib"]).join(","), "docs/b.md");
+
+    const makeFixFixture = (content) => {
+      const base = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-fix-"));
+      const repo = path.join(base, "repo");
+      fs.mkdirSync(repo, { recursive: true });
+      fs.writeFileSync(path.join(repo, "run.js"), content, "utf8");
+      fs.writeFileSync(path.join(repo, "package.json"), '{"name":"fix-fixture","version":"1.0.0"}\n', "utf8");
+      git(["init", "-q"], repo);
+      git(["config", "user.email", "t@example.com"], repo);
+      git(["config", "user.name", "t"], repo);
+      git(["add", "-A"], repo);
+      git(["commit", "-qm", "base"], repo);
+      return { base, repo };
+    };
+    const patchFrom = (repo, base, content, name) => {
+      const target = path.join(repo, "run.js");
+      const original = fs.readFileSync(target, "utf8");
+      fs.writeFileSync(target, content, "utf8");
+      const file = path.join(base, name);
+      fs.writeFileSync(file, gitOut(["diff"], repo), "utf8");
+      fs.writeFileSync(target, original, "utf8");
+      return file;
+    };
+    const fixEnv = { SIGNOFF_NO_BOOTSTRAP: "1", SIGNOFF_NO_MACHINE: "1" };
+
+    // 1) 真的把测试改绿：留下
+    const redFix = makeFixFixture("process.exit(1);\n");
+    const goodPatch = patchFrom(redFix.repo, redFix.base, "process.exit(0);\n", "good.diff");
+    const keepRes = run(["fix", "--patch", goodPatch, "--run", "node run.js"], redFix.repo, fixEnv);
+    check("fix: a real fix is kept", keepRes.status, 0, String(keepRes.stdout || keepRes.stderr || "").slice(-160));
+    check(
+      "fix: a kept fix stays applied",
+      fs.readFileSync(path.join(redFix.repo, "run.js"), "utf8").includes("exit(0)"),
+      true
+    );
+    check("fix: the record is written", fs.existsSync(path.join(redFix.repo, ".signoff", "fix-log.jsonl")), true);
+
+    // 2) 改了点东西但没让测试变绿：整单回滚
+    const redAgain = makeFixFixture("process.exit(1);\n");
+    const badPatch = patchFrom(redAgain.repo, redAgain.base, "// still red\nprocess.exit(1);\n", "bad.diff");
+    const rolled = run(["fix", "--patch", badPatch, "--run", "node run.js"], redAgain.repo, fixEnv);
+    check("fix: a fix that does not flip the verdict is rolled back", rolled.status, 1);
+    check(
+      "fix: rollback restores the file",
+      fs.readFileSync(path.join(redAgain.repo, "run.js"), "utf8").trim(),
+      "process.exit(1);"
+    );
+
+    // 3) 基线已经绿：没有复现就没有修复
+    const greenFix = makeFixFixture("console.log('ok');\n");
+    const commentPatch = patchFrom(greenFix.repo, greenFix.base, "console.log('ok'); // touched\n", "green.diff");
+    const already = run(["fix", "--patch", commentPatch, "--run", "node run.js"], greenFix.repo, fixEnv);
+    check("fix: a green baseline is refused", already.status, 2);
+
+    // 4) 判定路径：这个循环不许改闸门
+    const gatePatch = path.join(redFix.base, "gate.diff");
+    fs.writeFileSync(
+      gatePatch,
+      "diff --git a/bin/signoff.js b/bin/signoff.js\n--- a/bin/signoff.js\n+++ b/bin/signoff.js\n@@ -1 +1 @@\n-x\n+y\n",
+      "utf8"
+    );
+    const refused = run(["fix", "--patch", gatePatch, "--run", "node run.js"], redFix.repo, fixEnv);
+    check("fix: patching the verdict path is refused", refused.status, 2);
+
     // 反作弊闸门：测试变绿可以通过四种方式作弊，前三种必须被抓到
     const integrity = require(path.join(ROOT, "lib", "integrity.js"));
     const kinds = (before, after) => integrity.analyze(before, after).findings.map((f) => f.kind).sort().join(",");

@@ -119,3 +119,26 @@ boundary that cannot be bypassed.**
 `signoff audit [--range A..B] [--strict] [--since-install]`. `--since-install` looks only at commits after the install
 point, and first checks that the point is an ancestor of HEAD. After a rebase, force-push or fresh clone it exits 2;
 move the boundary with `signoff init --reset-install`.
+
+## signoff fix: the bounded repair loop
+
+`signoff fix --patch FILE [--scope PREFIX]... [--run CMD]... [--budget SEC] [--check] [--json]`
+
+It does not pretend to write code; it decides whether a patch may stay. Four conditions, and a
+missed one rolls the whole thing back:
+
+1. **the baseline must be red** — a fix without a reproducer is just extra change, so a green
+   baseline exits 2;
+2. **the patch must stay inside `--scope`**; anything else is refused;
+3. **the verdict path cannot be patched by this loop**: `bin/`, `lib/p1..p5`/`guard`/`core`/
+   `integrity`/`secrets`/`fix`, `gates/`, `.github/workflows/`, `.signoff/`. Gate changes go through a
+   normal commit with a human reading the diff;
+4. **after the patch it must be red -> green, with anti-tamper clean and nothing else moved**
+   (a new untracked file counts as moved).
+
+The tree must have no tracked modifications (HEAD is the rollback point); untracked files do not
+block it. Every decision is appended to `.signoff/fix-log.jsonl`: the patch, the files, both exit
+codes, the anti-tamper verdict, kept or rolled back, and why.
+
+Exit codes: `0` kept, `1` rolled back, `2` refused (usage, dirty tree, already green, out of scope,
+verdict path).

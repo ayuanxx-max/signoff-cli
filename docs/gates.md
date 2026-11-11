@@ -116,6 +116,23 @@
 `signoff audit [--range A..B] [--strict] [--since-install]`：默认看全部提交，`--since-install` 只看安装点之后，
 且会先确认安装点是 HEAD 的祖先；rebase、强推、换克隆后对不上会退 2，用 `signoff init --reset-install` 把边界挪到当前 HEAD。
 
+## signoff fix 修复循环
+
+`signoff fix --patch FILE [--scope PREFIX]... [--run CMD]... [--budget SEC] [--check] [--json]`
+
+不假装会写代码：它只仲裁「改完能不能留」。留下的条件只有四条，缺一条就整单回滚：
+
+1. **基线必须是红的**——没有复现的修复只是在增加变更量，所以基线绿直接退出 2；
+2. **patch 只能落在 `--scope` 声明的范围里**，越界拒绝；
+3. **判定路径不许被这个循环改**：`bin/`、`lib/p1..p5`/`guard`/`core`/`integrity`/`secrets`/`fix`、
+   `gates/`、`.github/workflows/`、`.signoff/`。改闸门要走正常提交，由人看 diff；
+4. **改完必须红转绿、反作弊 clean、没有 patch 之外的改动**（新出现的未跟踪文件也算越界）。
+
+工作区必须没有「被跟踪的改动」（回滚点是 HEAD）；未跟踪文件不挡路。判定结果写
+`.signoff/fix-log.jsonl`：patch、文件、前后两次运行的退出码、反作弊结论、留下还是回滚、原因。
+
+退出码：`0` 留下，`1` 回滚，`2` 拒绝动手（用法、脏工作区、基线已绿、越界、判定路径）。
+
 <!-- EN-BEGIN auto-embedded from docs/gates.en.md; edit that file and run node tools/sync-bilingual.mjs -->
 
 ## English
@@ -241,5 +258,28 @@ boundary that cannot be bypassed.**
 `signoff audit [--range A..B] [--strict] [--since-install]`. `--since-install` looks only at commits after the install
 point, and first checks that the point is an ancestor of HEAD. After a rebase, force-push or fresh clone it exits 2;
 move the boundary with `signoff init --reset-install`.
+
+### signoff fix: the bounded repair loop
+
+`signoff fix --patch FILE [--scope PREFIX]... [--run CMD]... [--budget SEC] [--check] [--json]`
+
+It does not pretend to write code; it decides whether a patch may stay. Four conditions, and a
+missed one rolls the whole thing back:
+
+1. **the baseline must be red** — a fix without a reproducer is just extra change, so a green
+   baseline exits 2;
+2. **the patch must stay inside `--scope`**; anything else is refused;
+3. **the verdict path cannot be patched by this loop**: `bin/`, `lib/p1..p5`/`guard`/`core`/
+   `integrity`/`secrets`/`fix`, `gates/`, `.github/workflows/`, `.signoff/`. Gate changes go through a
+   normal commit with a human reading the diff;
+4. **after the patch it must be red -> green, with anti-tamper clean and nothing else moved**
+   (a new untracked file counts as moved).
+
+The tree must have no tracked modifications (HEAD is the rollback point); untracked files do not
+block it. Every decision is appended to `.signoff/fix-log.jsonl`: the patch, the files, both exit
+codes, the anti-tamper verdict, kept or rolled back, and why.
+
+Exit codes: `0` kept, `1` rolled back, `2` refused (usage, dirty tree, already green, out of scope,
+verdict path).
 
 <!-- EN-END -->

@@ -70,6 +70,8 @@ signoff doctor [--json] [--fix]            why is (or isn't) it guarded? --fix r
 signoff release [--pre|--post] [--json]     does the published artifact actually work?
   signoff audit --since-install             only commits after the install point (refuses
                                              a point that is not an ancestor of HEAD)
+  signoff fix --patch FILE [--scope P]...    bounded repair: baseline must be red, patch must be
+                                             in scope, result must be red -> green, else rollback
   signoff uninstall [--keep-config] [--all]  remove hooks + CI workflow
 
 Requires Node >= 18 only; no Python. Options common to every gate: --json, -h.
@@ -220,6 +222,7 @@ if (cmd === "mcp") {
   require("../integrations/mcp/server.js");
   return;
 }
+if (cmd === "fix") process.exit(require("../lib/fix.js").run(rest));
 if (GATES[cmd]) {
   maybeBootstrap(cmd);
   process.exit(runGate(cmd, rest));
