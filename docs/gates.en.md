@@ -15,6 +15,21 @@ only Node 18+: there is no Python build and no degraded mode.
   "count fewer cases" fallback.
 - Result shape: `{"gate":"p1","ok":true,"elapsedMs":39,"budgetMs":180000,"cases":3}`. The case count is the largest
   number found in `N passed` / `N tests` / `N checks`.
+- Anti-tamper (`lib/integrity.js`): p1 asks not only "do the tests pass" but "is it still the same
+  test". It compares the working tree against a base (`SIGNOFF_BASE`, else the merge-base with
+  `origin/master`, else `HEAD~1`) and goes red on any of three things:
+
+  | Signal | Meaning |
+  | --- | --- |
+  | A new `skip` / `only` / `todo` / `xit` / `@pytest.mark.skip` | `.only` silences the rest of the file, so it counts too |
+  | More assertions deleted than added in the same file | a rewrite that keeps the count is fine |
+  | A numeric threshold on the same assertion got smaller | `>= 80` becoming `>= 60`; numbers are read from code, not from strings |
+
+  String literals are stripped first, so `test.skip(` inside an assertion message is not a finding.
+  Deliberate weakening is allowed but must be declared in `.signoff/integrity-allow.json`
+  (`file` / `kind` / `needle` / `reason`, reason at least 20 characters): the declaration stays in
+  the diff for review. The gate forbids quiet weakening, not weakening. A cache hit and the
+  docs-only fast path run this step too.
 
 ## p2 Coverage
 

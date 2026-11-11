@@ -15,6 +15,20 @@
   `N passed` / `N tests` / `N checks` 里取最大值。
 - `--install-hook` 写 `.git/hooks/pre-commit`（内容就是 `signoff p1`）。
 
+反作弊（`lib/integrity.js`）：p1 除了问「测试过没过」，还要问「测试还是不是原来那个测试」。
+拿工作区与 base（`SIGNOFF_BASE`，否则 `origin/master` 的 merge-base，再否则 `HEAD~1`）比对测试文件，
+命中三条之一即红：
+
+| 判据 | 说明 |
+| --- | --- |
+| 新增 `skip` / `only` / `todo` / `xit` / `@pytest.mark.skip` | `only` 让同文件其他用例静默不跑，同样算 |
+| 断言被删且同文件没有等量新增 | 删除的行数多于新增的行数 |
+| 同一断言的数字阈值被改小 | 例如 `>= 80` 改成 `>= 60`，数字取自代码部分，忽略字符串 |
+
+字符串字面量会先被剥掉，所以断言消息里出现 `test.skip(` 不算作弊。要显式放宽，写进
+`.signoff/integrity-allow.json`（`file` / `kind` / `needle` / `reason`，理由 ≥20 字），
+声明留在 diff 里供评审——闸门禁止的是"悄悄地"放宽。缓存命中与 docs-only 快路径同样会跑这一步。
+
 ## p2 覆盖率
 
 `signoff p2 [--min-scenario N] [--min-assertions N] [--strict] [--md FILE] [--json]`
@@ -123,6 +137,21 @@ only Node 18+: there is no Python build and no degraded mode.
   "count fewer cases" fallback.
 - Result shape: `{"gate":"p1","ok":true,"elapsedMs":39,"budgetMs":180000,"cases":3}`. The case count is the largest
   number found in `N passed` / `N tests` / `N checks`.
+- Anti-tamper (`lib/integrity.js`): p1 asks not only "do the tests pass" but "is it still the same
+  test". It compares the working tree against a base (`SIGNOFF_BASE`, else the merge-base with
+  `origin/master`, else `HEAD~1`) and goes red on any of three things:
+
+  | Signal | Meaning |
+  | --- | --- |
+  | A new `skip` / `only` / `todo` / `xit` / `@pytest.mark.skip` | `.only` silences the rest of the file, so it counts too |
+  | More assertions deleted than added in the same file | a rewrite that keeps the count is fine |
+  | A numeric threshold on the same assertion got smaller | `>= 80` becoming `>= 60`; numbers are read from code, not from strings |
+
+  String literals are stripped first, so `test.skip(` inside an assertion message is not a finding.
+  Deliberate weakening is allowed but must be declared in `.signoff/integrity-allow.json`
+  (`file` / `kind` / `needle` / `reason`, reason at least 20 characters): the declaration stays in
+  the diff for review. The gate forbids quiet weakening, not weakening. A cache hit and the
+  docs-only fast path run this step too.
 
 ### p2 Coverage
 

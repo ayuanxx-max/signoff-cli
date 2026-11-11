@@ -1614,6 +1614,32 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     for (const id of ["changelog-version", "citation-version", "git-tag", "surface-encoding", "npm-desc-encoding"]) {
       check(`release gate enforces ${id}`, relSrc.includes(`"${id}"`), true);
     }
+    // 反作弊闸门：测试变绿可以通过四种方式作弊，前三种必须被抓到
+    const integrity = require(path.join(ROOT, "lib", "integrity.js"));
+    const kinds = (before, after) => integrity.analyze(before, after).findings.map((f) => f.kind).sort().join(",");
+    check("integrity: a deleted assertion is a finding", kinds('check("a", 1, 1);\n', ""), "removed-assertion");
+    check(
+      "integrity: an equal-size rewrite is not a finding",
+      kinds('check("a", 1, 1);\n', 'check("b", 2, 2);\n'),
+      ""
+    );
+    check("integrity: a new skip is a finding", kinds('test("x", () => {});\n', 'test.skip("x", () => {});\n'), "skipped");
+    check("integrity: a new .only is a finding", kinds('test("x", () => {});\n', 'test.only("x", () => {});\n'), "focused");
+    check(
+      "integrity: a lowered threshold is a finding",
+      kinds('check("cases >= 80", n >= 80);\n', 'check("cases >= 60", n >= 60);\n'),
+      "threshold-lowered"
+    );
+    check(
+      "integrity: a raised threshold is not a finding",
+      kinds('check("cases >= 60", n >= 60);\n', 'check("cases >= 80", n >= 80);\n'),
+      ""
+    );
+    check(
+      "integrity: p1 folds the gate into its verdict",
+      /require\("\.\/integrity"\)/.test(fs.readFileSync(path.join(ROOT, "lib", "p1.js"), "utf8")),
+      true
+    );
     // 中文写坏成 ??? 是真实事故（GitHub About 与两个 release 正文都中过），出现即不可恢复
     const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
       if (e.name === '.git' || e.name === 'node_modules' || e.name === 'diagrams') return [];
