@@ -1614,6 +1614,63 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     for (const id of ["changelog-version", "citation-version", "git-tag", "surface-encoding", "npm-desc-encoding"]) {
       check(`release gate enforces ${id}`, relSrc.includes(`"${id}"`), true);
     }
+    // 评审存证：hash 才是主张，签名是自述
+    const rev = require(path.join(ROOT, "lib", "review.js"));
+    check("review: diffInfo hashes the staged diff", typeof rev.diffInfo, "function");
+    const rbase = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-review-"));
+    const rrepo = path.join(rbase, "repo");
+    fs.mkdirSync(rrepo, { recursive: true });
+    const rEnv = { SIGNOFF_NO_MACHINE: "1", SIGNOFF_NO_BOOTSTRAP: "1" };
+    const rspawn = (args) => run(args, rrepo, rEnv);
+    git(["init", "-q"], rrepo);
+    git(["config", "user.email", "t@example.com"], rrepo);
+    git(["config", "user.name", "t"], rrepo);
+    fs.writeFileSync(path.join(rrepo, "a.js"), "module.exports = 1;\n", "utf8");
+    git(["add", "-A"], rrepo);
+    git(["commit", "-qm", "base"], rrepo);
+
+    fs.writeFileSync(path.join(rrepo, "a.js"), "module.exports = 2;\n", "utf8");
+    git(["add", "a.js"], rrepo);
+    const noReview = rspawn(["review", "--verify"]);
+    check("review: an unreviewed diff fails verification", noReview.status, 1);
+
+    const made = rspawn(["review", "--by", "deepseek-flash", "--model", "deepseek/flash", "--note", "checked the loop bound", "--json"]);
+    check("review: an attestation is recorded", made.status, 0);
+    let revRec = null;
+    try {
+      revRec = JSON.parse(String(made.stdout));
+    } catch (e) {
+      revRec = null;
+    }
+    check("review: the record carries the model id", revRec && revRec.model, "deepseek/flash");
+    check("review: the record carries a diff hash", revRec && /^[0-9a-f]{32}$/.test(revRec.hash || ""), true);
+
+    const afterReview = rspawn(["review", "--verify"]);
+    check("review: the reviewed diff verifies", afterReview.status, 0);
+
+    // 改一个字节：同一份评审不再适用
+    fs.writeFileSync(path.join(rrepo, "a.js"), "module.exports = 3;\n", "utf8");
+    git(["add", "a.js"], rrepo);
+    const changed = rspawn(["review", "--verify"]);
+    check("review: changing the diff invalidates the approval", changed.status, 1);
+
+    // 失败模式库：同一条红出现三次就是模式，不是意外
+    const pat = require(path.join(ROOT, "lib", "patterns.js"));
+    const synthetic = [
+      { ts: "2026-11-01T00:00:00Z", gate: "p1", ok: false, ms: 4000 },
+      { ts: "2026-11-02T00:00:00Z", gate: "p1", ok: true, ms: 3000 },
+      { ts: "2026-11-03T00:00:00Z", gate: "p1", ok: false, ms: 5000 },
+      { ts: "2026-11-04T00:00:00Z", gate: "p1", ok: false, ms: 6000 },
+      { ts: "2026-11-05T00:00:00Z", gate: "p5", ok: false, ms: 120 },
+    ];
+    const pats = pat.extract(synthetic, [{ action: "publish", decision: "deny" }, { action: "publish", decision: "deny" }], { min: 2 });
+    check("patterns: the worst gate is listed first", pats[0].key, "gate:p1");
+    check("patterns: three failures count as recurring", pats[0].recurring, true);
+    check("patterns: the rate is a number, not a feeling", pats[0].rate, 75);
+    check("patterns: a single failure is not recurring", pats.find((x) => x.key === "gate:p5").recurring, false);
+    check("patterns: refused audit actions are a pattern too", pats.find((x) => x.key === "action:publish").count, 2);
+    check("patterns: an empty log yields no patterns", pat.extract([], [], { min: 2 }).length, 0);
+
     // 分歧仲裁：复现即证据。结论只由"重复跑"定，不由措辞定
     const disp = require(path.join(ROOT, "lib", "dispute.js"));
     check("dispute: all pass supports a claim", disp.classify(3, 0, "pass"), "supported");

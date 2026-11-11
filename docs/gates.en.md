@@ -165,3 +165,37 @@ and says how many attempts ran.
 Evidence goes to `.signoff/disputes/<time>-<id>.json` with an environment fingerprint (node version,
 platform, arch, git short hash, directory). `--replay` reads a record, reruns the same commands and
 compares verdicts: same exits 0, changed exits 1.
+
+## signoff review: attestation bound to a diff hash
+
+`signoff review --by ID [--model PROVIDER/MODEL] [--verdict approve|reject] [--note TEXT] [--json]`
+`signoff review --verify` · `signoff review --status` · `signoff review --list [--limit N]`
+
+An attestation proves exactly one thing, and it is the thing that matters: **the diff that was
+reviewed is the diff being shipped**. The sha256 short hash of the diff is stored with the review in
+`.signoff/reviews.jsonl`; change one byte and the hash changes, so the old approval stops applying.
+
+`--by` and `--model` are self-declared — any tool saying "I reviewed it" is only saying so, and this
+does not pretend to verify that someone actually read the code. What it verifies is the binding:
+`--verify` recomputes the hash of the staged diff (or the working diff when nothing is staged) and
+exits 0 only when an `approve` exists for that exact hash, otherwise 1, printing which hash was last
+approved.
+
+## signoff patterns: the failure-pattern library
+
+`signoff patterns [--min N] [--top N] [--since DAYS] [--md FILE] [--json]`
+
+Reads `.signoff/runs.log` (gate / ok / duration per run) and the ledger `.signoff/audit.log`
+(action / decision), groups scattered failures into patterns of "the same place going red again" and
+sorts by count. One failure carries no information; repetition does — it means the last fix did not
+touch the cause. `--min` (default 2) sets what counts as repetition.
+
+From this repository (423 run records):
+
+```
+[patterns] gate:p5 x18/114 (16%) last ... recurring
+[patterns]   same gate failed 18 times — the previous fix probably did not touch the cause
+[patterns] gate:p1 x6/115 (5%) last ... recurring
+```
+
+`--md FILE` exports a Markdown table for a weekly review.

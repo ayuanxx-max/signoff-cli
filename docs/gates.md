@@ -153,6 +153,36 @@
 证据写到 `.signoff/disputes/<时间>-<id>.json`，含环境指纹（node 版本、平台、架构、git 短哈希、目录）。
 `--replay` 读回记录重跑同样的命令，比对结论：一致退出 0，变了退出 1。
 
+## signoff review 评审存证
+
+`signoff review --by ID [--model PROVIDER/MODEL] [--verdict approve|reject] [--note TEXT] [--json]`
+`signoff review --verify` · `signoff review --status` · `signoff review --list [--limit N]`
+
+存证能证明的只有一件事，但这件很关键：**评审过的 diff 和要发布的 diff 是同一份**。diff 的
+sha256 短哈希与评审一起写进 `.signoff/reviews.jsonl`；改动一个字节，hash 就变，旧评审自动失效。
+
+`--by` 与 `--model` 是**自述**——任何工具的「我审过了」都只是自述，这里不装作能验证谁真的读了代码。
+它验证的是绑定关系：`--verify` 重算当前暂存 diff（没有暂存改动则看工作区）的哈希，只有当存在一份
+针对该哈希的 `approve` 时才退出 0，否则退出 1 并打印「上次被批准的是哪个哈希」。
+
+## signoff patterns 失败模式库
+
+`signoff patterns [--min N] [--top N] [--since DAYS] [--md FILE] [--json]`
+
+读 `.signoff/runs.log`（每次闸门运行的 gate / ok / 耗时）与账本 `.signoff/audit.log`（action /
+decision），把散落的失败按「同一个地方反复红」聚成模式，按出现次数排序。单条失败没有信息量，
+重复出现才有：它说明上次的修法没有碰到原因。`--min`（默认 2）决定几次算重复。
+
+输出形如（本仓库实测，423 条运行记录）：
+
+```
+[patterns] gate:p5 x18/114 (16%) last ... recurring
+[patterns]   same gate failed 18 times — the previous fix probably did not touch the cause
+[patterns] gate:p1 x6/115 (5%) last ... recurring
+```
+
+`--md FILE` 导出 Markdown 表，供周报或复盘引用。
+
 <!-- EN-BEGIN auto-embedded from docs/gates.en.md; edit that file and run node tools/sync-bilingual.mjs -->
 
 ## English
@@ -324,5 +354,39 @@ and says how many attempts ran.
 Evidence goes to `.signoff/disputes/<time>-<id>.json` with an environment fingerprint (node version,
 platform, arch, git short hash, directory). `--replay` reads a record, reruns the same commands and
 compares verdicts: same exits 0, changed exits 1.
+
+### signoff review: attestation bound to a diff hash
+
+`signoff review --by ID [--model PROVIDER/MODEL] [--verdict approve|reject] [--note TEXT] [--json]`
+`signoff review --verify` · `signoff review --status` · `signoff review --list [--limit N]`
+
+An attestation proves exactly one thing, and it is the thing that matters: **the diff that was
+reviewed is the diff being shipped**. The sha256 short hash of the diff is stored with the review in
+`.signoff/reviews.jsonl`; change one byte and the hash changes, so the old approval stops applying.
+
+`--by` and `--model` are self-declared — any tool saying "I reviewed it" is only saying so, and this
+does not pretend to verify that someone actually read the code. What it verifies is the binding:
+`--verify` recomputes the hash of the staged diff (or the working diff when nothing is staged) and
+exits 0 only when an `approve` exists for that exact hash, otherwise 1, printing which hash was last
+approved.
+
+### signoff patterns: the failure-pattern library
+
+`signoff patterns [--min N] [--top N] [--since DAYS] [--md FILE] [--json]`
+
+Reads `.signoff/runs.log` (gate / ok / duration per run) and the ledger `.signoff/audit.log`
+(action / decision), groups scattered failures into patterns of "the same place going red again" and
+sorts by count. One failure carries no information; repetition does — it means the last fix did not
+touch the cause. `--min` (default 2) sets what counts as repetition.
+
+From this repository (423 run records):
+
+```
+[patterns] gate:p5 x18/114 (16%) last ... recurring
+[patterns]   same gate failed 18 times — the previous fix probably did not touch the cause
+[patterns] gate:p1 x6/115 (5%) last ... recurring
+```
+
+`--md FILE` exports a Markdown table for a weekly review.
 
 <!-- EN-END -->
