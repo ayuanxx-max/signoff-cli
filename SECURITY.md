@@ -42,5 +42,5 @@
 
 ## 供应链
 
-- 运行时依赖：Node ≥ 18 与 `git`；`package.json` 的 `dependencies` 为空（安装不引入第三方运行时代码）。
+- 运行时依赖：Node ≥ 20 与 `git`；`package.json` 的 `dependencies` 为空（安装不引入第三方运行时代码）。
 - 发布走 npm 官方源；包内容以 `npm pack` 的 `files[]` 为准，`signoff release --pre/--post` 会核对清单与实际产物。

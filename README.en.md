@@ -10,7 +10,7 @@
 > You do not have to change anything. Keep working as usual — this thing guards the process for you.
 
 SignOff turns "done" into **a verdict someone else can re-check**: all seven gates pass, or the commit is stopped
-on the spot with a fix you can act on. Pure Node (>= 18) — no network, no account, no Python. The verdict is an exit
+on the spot with a fix you can act on. Pure Node (>= 20) — no network, no account, no Python. The verdict is an exit
 code: `0` pass, `1` red, `2` usage or environment error.
 
 中文: [README.md](README.md)

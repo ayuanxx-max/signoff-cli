@@ -1,3 +1,38 @@
+## 4.7.0
+
+**版本与分支这一节从三段话变成可核对的一节；顺带修掉一个「声明了但没测过」的支持面。**
+
+- **深入论证**：`docs/release-model.md` 第 8 节重写为九小节——自己的发行事实（70 个 tag 落在同一周、73 节 CHANGELOG 里
+  0 处标 `BREAKING`、一次 CI 14 个 job）、三条外部信号（按版本下载分布、Node 支持面、五层接口面）、四条通道的取舍、
+  开分支的五项成本、N-1 支持面决策、三条可测的触发条件，以及复现方式。英文侧同构。
+- **新增 `tools/release-cadence.mjs`**：把 tag 数、间隔中位数、`BREAKING` 计数、engines 与 CI 矩阵是否一致打成 JSON；
+  `--npm` 另取按版本的周下载。文档里的数字不再靠手抄，跑一次就能核对。
+- **修支持面**：`engines.node` 从 `>=18` 改为 `>=20`，与 CI 矩阵（20 / 22 / 24）对齐。Node 18 已于 2025-04-30 EOL，
+  且从未在 CI 上跑过——声明一个没测过、也不再维护的运行时，比不声明更糟。此变更标 `BREAKING`，按 minor 发布
+  （理由见第 8.7 节第 3 条）。`lib/core.js` 注释与各文档里的 18 一并改为 20。
+- 自测 464 passed / 0 failed：新增「engines 下限 = CI 矩阵最小 Node」「CI 矩阵三档」「节奏工具可运行」四类断言。
+- 判定逻辑没动。
+
+### English
+
+**The version-branch section is now checkable instead of three paragraphs; one declared-but-untested support surface is
+fixed on the way.**
+
+- **Deeper case**: section 8 of `docs/release-model.md` is rewritten into nine subsections — our own release record
+  (70 tags inside one week, 0 of 73 CHANGELOG sections marked `BREAKING`, 14 jobs per CI run), three external signals
+  (per-version download spread, the Node support surface, five interface layers), the trade-offs between four channels,
+  the five costs of a branch, the N-1 decision, three measurable triggers, and how to reproduce the numbers. The
+  Chinese side mirrors it.
+- **New `tools/release-cadence.mjs`** prints tags, median gap, `BREAKING` count and whether `engines` matches the CI
+  matrix as JSON; `--npm` adds per-version weekly downloads. Numbers in the docs are measured, not hand-copied.
+- **Support surface fixed**: `engines.node` moves from `>=18` to `>=20`, aligned with the CI matrix (20 / 22 / 24).
+  Node 18 reached EOL on 2025-04-30 and never ran in CI; declaring an untested, unmaintained runtime is worse than
+  declaring nothing. The change is marked `BREAKING` but ships as a minor (reasoning in section 8.7, rule 3). The
+  comment in `lib/core.js` and every doc mention of 18 are updated.
+- 464 passed / 0 failed, with four new assertion groups (engines floor equals the smallest CI Node, three Node lines in
+  the matrix, the cadence tool runs, and it agrees that engines match CI).
+- Verdict logic untouched.
+
 ## 4.6.2
 
 **把首行徽章放回去（含 CI 状态）。**
@@ -811,7 +846,7 @@ value metrics. No change to the verdict logic.**
 - 新增 `signoff init --chain`：仓库已有钩子时不再只备份，而是存成 `<name>.local` 并在我们的钩子里**先执行**；它失败就停，`signoff uninstall` 把它原样装回 `<name>`。默认行为不变（`<name>.signoff-backup`，不串接）。
 - 修：生成的 CI 工作流在浅克隆下会红。`git rev-parse HEAD~1` 找不到对象时会把名字原样打印到 stdout，导致 `audit --range "HEAD~1..HEAD"` 解析失败退 2。现在工作流 `fetch-depth: 0`、用 `git cat-file -e "$BASE^{commit}"` 判断、必要时 `--unshallow`，取不到就打印跳过。
 - 修：`signoff --version` / `-v` 之前落到“未知命令”退 2；现在打印版本退 0。HELP 里的旧名「一诺过五关」改回「落印」。
-- 新增 `.github/workflows/ci.yml`：node 18/20/22 × ubuntu/macos/windows 矩阵跑 `node test/selftest.js`，另一个 job 跑 python 对等，再一个 job 做 `npm pack` + 全局安装 + `init`/`commit`/`audit --since-install`/`doctor` 冒烟。
+- 新增 `.github/workflows/ci.yml`：node 20/20/22 × ubuntu/macos/windows 矩阵跑 `node test/selftest.js`，另一个 job 跑 python 对等，再一个 job 做 `npm pack` + 全局安装 + `init`/`commit`/`audit --since-install`/`doctor` 冒烟。
 - 自查 126 项（新增 `--version`、HELP 名字、CI 取全历史、CI 取已验证 rev、串接 8 项）全过，Python 对等 30 项全过。
 
 ## 3.5.1 — 2026-11-06

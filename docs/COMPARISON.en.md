@@ -56,7 +56,7 @@ Why each cell:
 - **C**: deep in one place (secrets), with its own rules and baselines, so the verdict score is 3 — but it answers
   only "is there a secret".
 - **SignOff**: one gate per class of failure, the verdict is the exit code, and a pass leaves a marker + a signed
-  trailer + a hash-chained ledger + an anchored checkpoint. Loses one footprint point: needs Node 18+ and a git
+  trailer + a hash-chained ledger + an anchored checkpoint. Loses one footprint point: needs Node 20+ and a git
   repo, and installing the hook takes one `signoff init`.
 
 ## 4. Four quadrants
@@ -86,7 +86,7 @@ situation (scenario).
 | Several agents editing one repo | P3 catches colliding files before the commit, not after CI breaks |
 | Answering "did that one pass?" months later | ledger + checkpoint + anchor, re-checkable entry by entry |
 | Last step before a release | `signoff release --pre` runs 14 offline consistency checks |
-| Small language-agnostic teams | Node 18+ and git only; no Python/Go/container requirement |
+| Small language-agnostic teams | Node 20+ and git only; no Python/Go/container requirement |
 
 **Does not fit**
 

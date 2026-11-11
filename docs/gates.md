@@ -3,7 +3,7 @@
 > English: [gates.en.md](gates.en.md) · 报告契约：[REPORT-CONTRACT.md](REPORT-CONTRACT.md)
 
 每关一条命令，判决写 `.signoff/pN.json`，退出码 0 过 / 1 红 / 2 用法或环境。全部是 Node 实现
-（`lib/p1.js`…`lib/p5.js`、`lib/guard.js`、`lib/secrets.js`），只要求 Node 18+，没有 Python 版本，也没有降级模式。
+（`lib/p1.js`…`lib/p5.js`、`lib/guard.js`、`lib/secrets.js`），只要求 Node 20+，没有 Python 版本，也没有降级模式。
 
 ## p1 测试
 
@@ -112,7 +112,7 @@
 
 One command per gate. The verdict is written to `.signoff/pN.json` and the exit code is 0 pass / 1 red /
 2 usage or environment. Everything is Node (`lib/p1.js` … `lib/p5.js`, `lib/guard.js`, `lib/secrets.js`) and needs
-only Node 18+: there is no Python build and no degraded mode.
+only Node 20+: there is no Python build and no degraded mode.
 
 ### p1 Tests
 

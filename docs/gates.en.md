@@ -4,7 +4,7 @@
 
 One command per gate. The verdict is written to `.signoff/pN.json` and the exit code is 0 pass / 1 red /
 2 usage or environment. Everything is Node (`lib/p1.js` … `lib/p5.js`, `lib/guard.js`, `lib/secrets.js`) and needs
-only Node 18+: there is no Python build and no degraded mode.
+only Node 20+: there is no Python build and no degraded mode.
 
 ## p1 Tests
 
