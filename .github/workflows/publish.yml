@@ -37,13 +37,13 @@ jobs:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
-      - name: gate: self-test
+      - name: "gate: self-test"
         run: node test/selftest.js
 
-      - name: gate: docs (p5)
+      - name: "gate: docs (p5)"
         run: node bin/signoff.js p5
 
-      - name: gate: tag equals package.json version
+      - name: "gate: tag equals package.json version"
         run: |
           node -e '
             const v = require("./package.json").version;
@@ -53,7 +53,7 @@ jobs:
             console.log("tag ok:", v);
           '
 
-      - name: gate: tarball contents
+      - name: "gate: tarball contents"
         run: npm pack --dry-run
 
       - name: publish with provenance
