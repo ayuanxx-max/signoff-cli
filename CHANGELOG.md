@@ -1,3 +1,20 @@
+## 4.4.1
+
+**只改文档：把 4.4.0 的对比与象限说明带进 npm 页面。判定逻辑与代码未改。**
+
+- 新增 `docs/COMPARISON.md` / `docs/COMPARISON.en.md`：六个维度打分、竞品真实星标与周下载、象限读法、场景边界。
+- 新增 `docs/diagrams/src/{quadrant,before-after}.mmd` 与渲染图；README 第八节引用象限图。
+- 版本号推进的原因：npm 页面展示的是**发布时刻**的 README，4.4.0 发布早于这批文档，需要一次内容同步。
+- 实测：`npm test` 413 passed、`signoff p5` PASS、`release --pre` 14/14、`release --post` 17/17。
+
+### English
+
+**Documentation only: bring the 4.4.0 comparison and quadrant notes onto the npm page. No code or verdict change.**
+
+- Adds `docs/COMPARISON.md` and `COMPARISON.en.md` (six scored dimensions, real stars and weekly downloads,
+  quadrant reading, fit and non-fit), plus Mermaid sources and rendered diagrams.
+- The version bump exists because npm renders the README as of the publish moment; 4.4.0 shipped before these docs.
+
 ## 4.4.0
 
 **接口与自治理：下游字段契约、架构体检、威胁模型、贡献度量化。判定逻辑未变。**
