@@ -1,0 +1,26 @@
+flowchart LR
+    subgraph Before["4.3.1：判决有了，接口没有"]
+        A1["五关判定<br/>P1-P5"]
+        A2["退出码 0/1/2"]
+        A3["report --json<br/>字段靠猜"]
+        A4["账本/检查点<br/>只在本机"]
+        A1 --> A2 --> A3
+        A1 --> A4
+    end
+
+    subgraph After["4.4.0：判决不变，接口与自证补齐"]
+        B1["五关判定<br/>P1-P5（未改）"]
+        B2["退出码 0/1/2<br/>（未改）"]
+        B3["report --schema<br/>字段三级稳定性"]
+        B4["INTEGRATION-CONTRACT<br/>上游只产输入 / 下游只消费"]
+        B5["arch-health<br/>四规则 + 基线台账"]
+        B6["signoff-metrics<br/>翻案率/返工/跳过"]
+        B7["SECURITY.md<br/>threat-model A1-A7"]
+        B1 --> B2 --> B3
+        B1 --> B4
+        B1 --> B5
+        B1 --> B6
+        B1 --> B7
+    end
+
+    A1 -.->|"判定逻辑照旧"| B1

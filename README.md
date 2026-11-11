@@ -468,6 +468,29 @@ SignOff 会装钩子、会以你的身份跑命令，所以它自己的边界也
   （无环、基座不反向依赖、不向上依赖入口、超限文件必须登记）；存量债务登记在册，**新增违规才判红**。
 - [`docs/deletion.md`](docs/deletion.md)：删除也要证据（D1–D4），删错一次比慢一次贵得多。
 
+## 八、和谁比、用在哪
+
+同类不是代码审查工具，而是**抢同一个 `pre-commit` 钩子的那一层**：husky、pre-commit、lefthook。
+取数时间 2026-11-11（GitHub / npm / PyPI API）：
+
+| 项目 | 星标 | 周下载 | 给判决 | 留证据 |
+| --- | --- | --- | --- | --- |
+| husky | 35,388 | 49,271,405（npm） | 否（只传退出码） | 否 |
+| pre-commit | 15,691 | 35,897,535（PyPI） | 半（记录跑没跑） | 否 |
+| lefthook | 9,019 | 9,576,276（npm） | 否 | 否 |
+| **signoff-cli** | **2** | **3,237** | **是** | **是** |
+
+![判定可信度 vs 采用规模](https://raw.githubusercontent.com/ayuanxx-max/signoff-cli/master/docs/diagrams/quadrant.png)
+
+SignOff 在**左上**象限：可验但没人用。这是实话——规模差四个数量级，选型时若按采用量比，今天不该选它；
+它唯一的理由是你需要那个别人不提供的判决与证据。
+
+**适合**：agent 参与交付的仓库、多个 agent 并发改同一仓库、需要事后回答"那次到底过没过"、发版前自洽检查。
+**不适合**：非 git 目录、想让它"帮忙改到绿"、需要运行时沙箱、超大 monorepo 的构建编排。
+
+完整对比（六个维度打分、象限读法、7 条诚实差距）：[中文](docs/COMPARISON.md) ｜ [English](docs/COMPARISON.en.md)。
+4.3.1 → 4.4.0 的逐项变化：[发布说明](docs/release-notes-4.4.0.md)。
+
 ## English
 
 **Language.** The board follows your system language by default: `signoff report --html --lang en` renders the
