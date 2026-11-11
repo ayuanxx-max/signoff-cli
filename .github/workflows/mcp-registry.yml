@@ -18,6 +18,8 @@ jobs:
       - name: Install mcp-publisher
         run: |
           curl -fsSL -o mcp-publisher.tar.gz https://github.com/modelcontextprotocol/registry/releases/download/v1.8.8/mcp-publisher_linux_amd64.tar.gz
+          # 校验和钉死：URL 换版本时必须同步改这一行，否则这一步会红
+          echo "09f1fa70ee146b640584274a1a6b2b8a0310b05d4321fa9224e6df6a016d67f4  mcp-publisher.tar.gz" | sha256sum -c -
           tar xzf mcp-publisher.tar.gz mcp-publisher
           sudo install -m 0755 mcp-publisher /usr/local/bin/mcp-publisher
       - name: Wait for npm to serve this version
