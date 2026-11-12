@@ -14,6 +14,9 @@
 - 结果形如 `{"gate":"p1","ok":true,"elapsedMs":39,"budgetMs":180000,"cases":3}`，用例数从
   `N passed` / `N tests` / `N checks` 里取最大值。
 - `--install-hook` 写 `.git/hooks/pre-commit`（内容就是 `signoff p1`）。
+- 快慢两层：`pre-commit` 跑**快检**，`pre-push` 与 CI 跑**全套**。快检入口是
+  `.signoff/config.json` 的 `fast_cmd`，其次是 `package.json` 的 `test:fast`（即 `npm run -s test:fast`）。
+  两样都没有就退回全套——没有声明就没有这一层，闸门不会默认放水；缓存键带模式，快检过的树推送时照样跑全套。
 
 反作弊（`lib/integrity.js`）：p1 除了问「测试过没过」，还要问「测试还是不是原来那个测试」。
 拿工作区与 base（`SIGNOFF_BASE`，否则 `HEAD`——diff 出来就是暂存区加工作区，正是这次要提交的内容）
@@ -105,12 +108,13 @@
 | 场景 | 跑的关 |
 | --- | --- |
 | 暂存了 README、`docs/` 下的文件 | p5 |
-| 探到测试命令（`package.json` 的 test，或 pytest） | p1 |
+| 探到测试命令（`package.json` 的 test，或 pytest） | p1（提交跑 `test:fast`，推送跑全套） |
 | 存在 `verify/scenarios/` | p2 `--strict` |
 | 存在账本（仓库内或 `~/.signoff/audit.log`） | p4 `verify` |
 | 暂存内容里有疑似密钥 | sec |
 
-`.signoff/cache.json` 以 `git write-tree` 的结果为键：同一份暂存内容重复提交只判一次，所以第二次是「最近一次跑闸」那种毫秒级。
+`.signoff/cache.json` 以 `git write-tree` 的结果加运行模式（`fast` / `full`）为键：同一份暂存内容重复提交只判一次，
+且**快检的通过不能替推送那一次的全套作保**。
 `SIGNOFF_SKIP=1` 跳过并写 `.signoff/skips.log`；`git commit --no-verify` 不写任何记录——所以 **CI 是唯一不可绕过的边界**。
 
 ## 审计边界

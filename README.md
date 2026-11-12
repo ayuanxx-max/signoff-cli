@@ -30,7 +30,7 @@ English: [README.en.md](README.en.md)
 ```bash
 npm i -g signoff-cli
 cd your-repo
-signoff init            # 装 pre-commit / commit-msg 钩子 + CI，之后不用记
+signoff init            # 装 pre-commit / commit-msg / pre-push 钩子 + CI，之后不用记
 signoff status          # 这个仓库现在被守护了吗
 signoff report --html   # 一页只读看板（默认写 .signoff/report.html）
 ```
@@ -86,7 +86,7 @@ signoff report --html   # 一页只读看板（默认写 .signoff/report.html）
 
 | 入口 | 一句话 |
 | --- | --- |
-| 本机钩子 | `signoff init` 装 pre-commit / commit-msg，提交时自动跑 |
+| 本机钩子 | `signoff init` 装 pre-commit / commit-msg / pre-push：提交跑快检，推送跑全套 |
 | GitHub Actions | `signoff init` 顺带写 workflow（`--no-ci` 可跳过） |
 | pre-commit | `.pre-commit-config.yaml` 里一行 hook |
 | lefthook / husky | 已有钩子的仓库用 `signoff init --chain`，不抢你的钩子 |
@@ -200,7 +200,7 @@ code: `0` pass, `1` red, `2` usage or environment error.
 ```bash
 npm i -g signoff-cli
 cd your-repo
-signoff init            # installs pre-commit / commit-msg hooks + CI, then you can forget it
+signoff init            # installs pre-commit / commit-msg / pre-push hooks + CI, then you can forget it
 signoff status          # is this repository guarded right now?
 signoff report --html   # one read-only page (writes .signoff/report.html by default)
 ```
@@ -261,7 +261,7 @@ Platforms and thin shells: one core, several entry points — see [docs/SURFACES
 
 | Entry | In one line |
 | --- | --- |
-| Local hooks | `signoff init` installs pre-commit / commit-msg; they run on every commit |
+| Local hooks | `signoff init` installs pre-commit / commit-msg / pre-push: fast checks on commit, the full suite on push |
 | GitHub Actions | `signoff init` also writes the workflow (`--no-ci` skips it) |
 | pre-commit | one hook line in `.pre-commit-config.yaml` |
 | lefthook / husky | repos that already have hooks use `signoff init --chain`; your hooks stay |

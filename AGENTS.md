@@ -18,9 +18,10 @@
 ## 提交前
 
 ```bash
-npm test                 # node test/selftest.js
-signoff p5               # 文档口径扫描（会挡"绝对/必然"这类无数字断言）
-git add -A && git commit # 钩子会跑 p1 + secrets
+npm run test:fast         # 提交时的快检层（8 项，约 2.4 s）
+npm test                  # 全套；钩子在 push 时跑它
+signoff p5                # 文档口径扫描（会挡"绝对/必然"这类无数字断言）
+git add -A && git commit # 钩子会跑 p1（test:fast）+ secrets
 ```
 
 ## 发布

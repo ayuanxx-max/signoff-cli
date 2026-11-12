@@ -307,6 +307,44 @@ function main() {
     });
     check("chained node hook left its mark", fs.existsSync(path.join(jrepo, ".js-ran")) ? 1 : 0, 1, (jc.stderr || "").trim());
 
+    // 提交快、推送严（2026-11-12）：pre-commit 只跑 test:fast，pre-push 跑全套；
+    // 两者的缓存不互相通融，没声明 test:fast 就不许悄悄放水。
+    const grepo = path.join(base, "fast-repo");
+    const fhome = path.join(base, "fast-home");
+    fs.mkdirSync(grepo, { recursive: true });
+    const gw = (p, s) => fs.writeFileSync(path.join(grepo, p), s, "utf8");
+    const gWrites = (name) => fs.existsSync(path.join(grepo, name)) ? 1 : 0;
+    gw("fast.js", "require('fs').writeFileSync('fast-ran', '1')\n");
+    gw("full.js", "require('fs').writeFileSync('full-ran', '1')\n");
+    gw(
+      "package.json",
+      JSON.stringify({ name: "f", version: "0.0.0", scripts: { test: "node full.js", "test:fast": "node fast.js" } }, null, 2)
+    );
+    gitOut(["init", "-q", "."], grepo);
+    gitOut(["add", "."], grepo);
+    gitOut(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "base"], grepo);
+    fs.mkdirSync(path.join(grepo, ".signoff"), { recursive: true });
+    fs.writeFileSync(path.join(grepo, ".signoff", "config.json"), "{}\n", "utf8");
+    gw("change.txt", "x");
+    gitOut(["add", "change.txt"], grepo);
+    const ghook = (stage) => run(["hook", stage], grepo, { SIGNOFF_HOME: fhome });
+    r = ghook("pre-commit");
+    check("pre-commit runs test:fast", gWrites("fast-ran"), 1, (r.stdout || "").trim());
+    check("pre-commit skips the full suite", gWrites("full-ran"), 0);
+    check("pre-commit says tests=fast", /tests=fast/.test(r.stdout) ? 1 : 0, 1, (r.stdout || "").trim());
+    // same tree: the fast pass must not let the push skip the full suite
+    r = ghook("pre-push");
+    check("pre-push runs the full suite", gWrites("full-ran"), 1, (r.stdout || "").trim());
+    check("pre-push ignores the fast cache", /cached pass/.test(r.stdout) ? 0 : 1, 1, (r.stdout || "").trim());
+    // no test:fast declared -> back to the full suite, never a silent pass
+    fs.rmSync(path.join(grepo, "fast-ran"), { force: true });
+    fs.rmSync(path.join(grepo, "full-ran"), { force: true });
+    gw("package.json", JSON.stringify({ name: "f", version: "0.0.0", scripts: { test: "node full.js" } }, null, 2));
+    gitOut(["add", "package.json"], grepo);
+    r = ghook("pre-commit");
+    check("no test:fast falls back to the full suite", gWrites("full-ran"), 1, (r.stdout || "").trim());
+
+
     // runner detection: named runners win, and an empty tests/ folder is not a suite
     const detector = require(path.join(ROOT, "lib", "detect.js"));
     const dprobe = (files) => {

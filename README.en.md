@@ -31,7 +31,7 @@ code: `0` pass, `1` red, `2` usage or environment error.
 ```bash
 npm i -g signoff-cli
 cd your-repo
-signoff init            # installs pre-commit / commit-msg hooks + CI, then you can forget it
+signoff init            # installs pre-commit / commit-msg / pre-push hooks + CI, then you can forget it
 signoff status          # is this repository guarded right now?
 signoff report --html   # one read-only page (writes .signoff/report.html by default)
 ```
@@ -92,7 +92,7 @@ Platforms and thin shells: one core, several entry points — see [docs/SURFACES
 
 | Entry | In one line |
 | --- | --- |
-| Local hooks | `signoff init` installs pre-commit / commit-msg; they run on every commit |
+| Local hooks | `signoff init` installs pre-commit / commit-msg / pre-push: fast checks on commit, the full suite on push |
 | GitHub Actions | `signoff init` also writes the workflow (`--no-ci` skips it) |
 | pre-commit | one hook line in `.pre-commit-config.yaml` |
 | lefthook / husky | repos that already have hooks use `signoff init --chain`; your hooks stay |

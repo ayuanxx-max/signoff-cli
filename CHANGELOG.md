@@ -1,5 +1,14 @@
 ## Unreleased
 
+### 钩子：提交跑快检，推送跑全套
+
+- `signoff init` 装的三个钩子各司其职：`pre-commit` 跑 p1 的快检层，`pre-push` 与 CI 跑全套。
+- 快检入口：`.signoff/config.json` 的 `fast_cmd`，其次是 `package.json` 的 `test:fast`（`npm run -s test:fast`）；
+  两样都没有就退回全套——没声明就没有这一层，闸门不会默认放水。
+- `.signoff/cache.json` 的键加上运行模式（`fast` / `full`）：快检通过不能替推送那一次的全套作保。
+- 本仓库新增 `node test/smoke.js`（`npm run test:fast`，8 项，约 2.4 s）：断言落在真正渲染出的页面 chip 上，
+  不是源码里的字符串——2026-11-12 那次「把端到端断言降级成源码匹配」就发生在这条路径上。
+
 ### 界面：金额带词、版面有据可查
 
 - 侧栏任务行的金额从裸 `$0.02` 改成 `费用 $0.02`（英文 `cost $0.02`）；看板上的每一处金额同样先出词再出数，
