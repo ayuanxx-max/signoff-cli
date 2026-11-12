@@ -11,8 +11,7 @@ pm 上的 latest 仍是 4.7.1。
   证据含每次退出码、耗时、stdout 摘要与环境指纹，--replay 可复核。
 - **signoff review**：把评审绑到 diff 哈希，改一字节即失效；--verify 校验「审过的=要发的」。
   --by/--model 是自述，工具只保证绑定关系。
-- **signoff patterns**：读 
-uns.log 与账本，把「同一处反复红」聚成模式并排序；--md 导出。
+- **signoff patterns**：读 runs.log 与账本，把「同一处反复红」聚成模式并排序；--md 导出。
 
 ## 4.7.1
 
