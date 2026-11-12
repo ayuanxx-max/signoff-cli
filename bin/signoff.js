@@ -111,7 +111,23 @@ function runGate(name, args) {
     console.error(`signoff: cannot start ${python()} (${r.error.message}). Set SIGNOFF_PYTHON.`);
     return 127;
   }
-  return r.status === null ? 1 : r.status;
+  const rc = r.status === null ? 1 : r.status;
+  // 反作弊闸门只有 JS 实现，python 参考门里没有。换引擎不能等于换一套判据：
+  // p1 绿了也要把 integrity 补判一次，否则 SIGNOFF_ENGINE=python 就是隐性豁免。
+  if (rc === 0 && name === "p1") {
+    try {
+      const integ = require("../lib/integrity").check({ cwd: process.cwd() });
+      if (!integ.ok) {
+        for (const f of integ.findings) console.error(`[p1] integrity: ${f.kind} ${f.file}`);
+        console.error(`[p1] integrity=FAIL ${integ.findings.length} finding(s) against base ${integ.base}`);
+        return 1;
+      }
+    } catch (e) {
+      /* 附加检查出错不该追加失败，但也不该静默：说一句 */
+      console.error(`signoff: integrity check skipped (${e && e.message})`);
+    }
+  }
+  return rc;
 }
 
 // Secrets run first in `all`: an unstaged key is worth more than a style report,

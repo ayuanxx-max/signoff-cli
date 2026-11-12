@@ -1662,6 +1662,18 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("fix: another project's lib file is allowed", cnFix.denied(["lib/foo.js"]).length, 0);
     check("fix: inside signoff-cli every lib module is refused", cnFix.denied(["lib/foo.js"], { self: true }).length, 1);
 
+    // dispute 的判据是"命令能跑、结果不稳定"，不是"命令拼错了"。拼错必须留下 0 份证据。
+    const dsp = require(path.join(ROOT, "lib", "dispute.js"));
+    const badRun = run(["dispute", "--claim", "typo", "--run", "nosuchcmd-signoff-fixture", "--repeat", "2"], p0repo, p0env);
+    check("dispute: a command that cannot run is exit 2", badRun.status, 2);
+    const ddir = path.join(p0repo, ".signoff", "disputes");
+    check("dispute: a command that cannot run writes no evidence", fs.existsSync(ddir) ? fs.readdirSync(ddir).length : 0, 0);
+    check("dispute: classify still separates the three verdicts", dsp.classify(2, 0, "pass"), "supported");
+
+    // base 是 HEAD：闸门只判这次要提交的改动，不翻上一次提交的旧账。
+    const integBase = require(path.join(ROOT, "lib", "integrity.js")).resolveBase(p0repo);
+    check("integrity: the base is HEAD", integBase, gitOut(["rev-parse", "HEAD"], p0repo).trim());
+
     // 评审存证：hash 才是主张，签名是自述
     const rev = require(path.join(ROOT, "lib", "review.js"));
     check("review: diffInfo hashes the staged diff", typeof rev.diffInfo, "function");
