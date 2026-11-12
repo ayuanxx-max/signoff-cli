@@ -19,7 +19,7 @@
 
 ```bash
 npm run test:fast         # 提交时的快检层（8 项，约 2.4 s）
-npm test                  # 全套；钩子在 push 时跑它
+npm test                  # 全套（两段并行，约 50 s）；钩子在 push 时跑它
 signoff p5                # 文档口径扫描（会挡"绝对/必然"这类无数字断言）
 git add -A && git commit # 钩子会跑 p1（test:fast）+ secrets
 ```

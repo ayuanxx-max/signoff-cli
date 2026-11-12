@@ -13,6 +13,8 @@
   推送与 CI 自动带上；只有 touched 非空才付这笔钱，`--nc-budget` 默认 180 s，超时算红。
   反向对照只问「会不会红」，所以测试套件在 `SIGNOFF_NC=1` 下**第一条红就收工**：126.1 s 的推送回到 65 s 量级。
 - `node test/selftest.js` 支持 `SIGNOFF_TIMING=1`：按耗时排出前 12 条用例，压时间先看数据。
+- `npm test` 改成两段并行（`test/run-all.js`）：用例一条没少，全套 93 s → **50 s 量级**，
+  推送闸门因此从 126 s 回到 **53 s**（含 2.2 s 反向对照）。`node test/selftest.js` 仍是完整串行路径。
 
 ### 界面：金额带词、版面有据可查
 
