@@ -16,7 +16,7 @@ const M = EN
       gates: { p1: "Tests", p2: "Coverage", p3: "Tasks", p4: "Risky actions", p5: "Docs", sec: "Secrets", release: "Release" },
       blocked: "failed", unknown: "unmeasured", ready: "all pass",
       rate: "pass rate", commits: "commits", tasks: "task groups",
-      gated: "gated", unmarked: "unmarked", more: (n) => ` (${n} more)`, lastRun: "last gate run",
+      gated: "gated", unmarked: "unmarked", cost: "cost", more: (n) => ` (${n} more)`, lastRun: "last gate run",
       open: "Open full page", fix: "How to fix: ",
       err: "Cannot read the data: run signoff report --html --mount inside the repository, then open this panel in the DSH window (direct access from an external browser is disabled).",
       title: "SignOff board", updated: "updated", none: "no mount records yet",
@@ -29,7 +29,7 @@ const M = EN
       gates: { p1: "测试", p2: "覆盖率", p3: "并发任务", p4: "危险动作", p5: "文档", sec: "密钥", release: "发布" },
       blocked: "未过", unknown: "待测", ready: "全过",
       rate: "过闸率", commits: "提交", tasks: "组任务",
-      gated: "过闸", unmarked: "无标记", more: (n) => `（还有 ${n} 组）`, lastRun: "最近一次跑闸",
+      gated: "过闸", unmarked: "无标记", cost: "费用", more: (n) => `（还有 ${n} 组）`, lastRun: "最近一次跑闸",
       open: "打开完整页面", fix: "怎么修：",
       err: "读不到数据：请确认已在仓库里跑过 signoff report --html --mount，并在 DSH 窗口里打开这个面板（外部浏览器直连被禁用）。",
       title: "SignOff 看板", updated: "更新于", none: "还没有挂载记录",
@@ -148,7 +148,7 @@ const VERDICT = {
           `${t.count} ${M.commits} · ${M.gated} ${t.passed}` +
             (t.rate != null ? ` · ${M.rate} ${t.rate}%` : "") +
             (t.unmarked ? ` · ${M.unmarked} ${t.unmarked}` : "") +
-            (t.cost > 0 ? ` · ${money(t.cost)}` : ""),
+            (t.cost > 0 ? ` · ${M.cost} ${money(t.cost)}` : ""),
         ),
       );
     }
