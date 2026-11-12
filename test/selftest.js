@@ -1544,6 +1544,13 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("SKILL.md teaches the guard command", /signoff guard/.test(skill), true);
     const mcpServer = fs.readFileSync(path.join(ROOT, "integrations", "mcp", "server.js"), "utf8");
     check("MCP run tool forwards to guard", /case "signoff_run":[\s\S]{0,80}\["guard"\]/.test(mcpServer), true);
+check(
+  "MCP exposes review/dispute/patterns/fix",
+  ["signoff_review", "signoff_dispute", "signoff_patterns", "signoff_fix"].every((t) => mcpServer.includes('name: "' + t + '"')),
+  true
+);
+check("MCP review tool verifies by default", /case "signoff_review":[\s\S]{0,600}"--verify"/.test(mcpServer), true);
+check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"/.test(mcpServer), true);
 
     // 中英同构：中文正文之后必须原样跟着英文全文（源头是 .en.md，工具同步、自测防漂移）
     const bi = spawnSync(process.execPath, [path.join(ROOT, "tools", "sync-bilingual.mjs"), "--check"], {

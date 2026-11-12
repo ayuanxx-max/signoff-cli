@@ -38,6 +38,11 @@ signoff report --html   # one read-only page (writes .signoff/report.html by def
 
 Once per machine is enough: `signoff ensure` idempotently fills in hooks, config and CI for every new clone.
 
+Beyond the gates there are four more commands: `signoff review` (an attestation bound to a diff hash;
+only `--verify` counts), `signoff fix` (bounded repair loop: red baseline, in-scope only, verdict paths
+untouchable), `signoff dispute` (run one reproducer N times and get supported / refuted / unresolved),
+`signoff patterns` (a library of failures that repeat in the same place). Details in `docs/gates.md`.
+
 ---
 
 ## 2. The seven gates: what actually blocks you

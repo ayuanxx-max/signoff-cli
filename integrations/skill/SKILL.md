@@ -22,6 +22,22 @@ signoff all        # p1, p2, p5, then p4 verify (the full local sweep)
   `.signoff/skips.log`, the second is invisible locally but `signoff audit --since-install` reports the missing trailer.
   If the gate itself is wrong, fix the config, not the verdict.
 
+## Review, repair, arbitration
+
+```bash
+signoff review --verify          # is the diff being shipped the one that was approved? (0 yes / 1 no)
+signoff review --by me --model provider/model --note "checked the loop bound"
+signoff fix --patch fix.patch --check   # preview: red baseline, inside --scope, verdict path untouched
+signoff dispute --claim "it passes" --run "npm test" --repeat 5   # 0 supported / 1 refuted / 3 unresolved
+signoff patterns                 # failures that repeat in the same place (where the last fix missed)
+```
+
+- `review` proves one thing: the reviewed diff and the shipped diff are the same (hash-bound). `--by`
+  is self-declared; do not present it as proof that a human read the code.
+- `fix` never writes code itself and never keeps a change unless the baseline was red, the patch stayed
+  in scope, the verdict path was untouched, and the run turned red -> green with anti-tamper clean.
+- `dispute` exits 2 when the command cannot even run: a typo is not evidence.
+
 ## The board
 
 ```bash

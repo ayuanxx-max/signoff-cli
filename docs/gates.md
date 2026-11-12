@@ -16,8 +16,10 @@
 - `--install-hook` 写 `.git/hooks/pre-commit`（内容就是 `signoff p1`）。
 
 反作弊（`lib/integrity.js`）：p1 除了问「测试过没过」，还要问「测试还是不是原来那个测试」。
-拿工作区与 base（`SIGNOFF_BASE`，否则 `origin/master` 的 merge-base，再否则 `HEAD~1`）比对测试文件，
-命中三条之一即红：
+拿工作区与 base（`SIGNOFF_BASE`，否则 `HEAD`——diff 出来就是暂存区加工作区，正是这次要提交的内容）
+比对测试文件，命中三条之一即红。base 不取 merge-base/`HEAD~1`：闸门判的是"这次要提交什么"，
+不是把上一次提交重判一遍，否则一个合法的删断言提交会让它之后每一次提交都红。
+路径一律从 `git -z` 读：中文、空格文件名不会被 `core.quotepath` 转义漏掉。
 
 | 判据 | 说明 |
 | --- | --- |
@@ -124,10 +126,15 @@
 
 1. **基线必须是红的**——没有复现的修复只是在增加变更量，所以基线绿直接退出 2；
 2. **patch 只能落在 `--scope` 声明的范围里**，越界拒绝；
-3. **判定路径不许被这个循环改**：`bin/`、`lib/p1..p5`/`guard`/`core`/`integrity`/`secrets`/`fix`、
-   `gates/`、`.github/workflows/`、`.signoff/`。改闸门要走正常提交，由人看 diff；
+3. **判定路径不许被这个循环改**：`bin/`、`gates/`、`.github/`、`.signoff/`、`package.json` 与锁文件，
+   以及所有会读判定结果的模块（`p1..p5`、`guard`、`core`、`integrity`、`secrets`、`fix`、`dispute`、
+   `review`、`patterns`、`detect`、`runslog`、`report` 等）。路径先归一大小写与分隔符再匹配
+   （`Lib/P1.js` 在 Windows 上就是 `lib/p1.js`）；只有在 signoff-cli 自己的仓库里，整个 `lib/`
+   才算判定路径——别人的 `lib/` 是普通源码。改闸门要走正常提交，由人看 diff；
 4. **改完必须红转绿、反作弊 clean、没有 patch 之外的改动**（新出现的未跟踪文件也算越界）。
 
+补丁里的路径按 git 的引号与八进制转义还原（`"a/\346\265\213.test.js"` 这类），重命名两侧都算改动；
+`git apply` 因换行不一致失败时会按 `--ignore-whitespace` 重试一次，仍失败就直接说 CRLF/LF 不一致。
 工作区必须没有「被跟踪的改动」（回滚点是 HEAD）；未跟踪文件不挡路。判定结果写
 `.signoff/fix-log.jsonl`：patch、文件、前后两次运行的退出码、反作弊结论、留下还是回滚、原因。
 
@@ -149,6 +156,8 @@
 第三种是最常被跳过的格子。它把「时好时坏」从一个形容词变成一个分数（p/N），并在证据里留下每一次的
 退出码、耗时、stdout 摘要哈希与尾部。没有复现步骤（`--run`）或没有说清主张（`--claim`）时直接退出 2；
 总耗时超过 `--budget` 时不硬凑结论，同样退出 2 并说明跑了几次。
+命令根本没跑起来（拼错、没装、不在 PATH）不算「不过」：这种尝试不进 pass/fail，也不写证据，
+全部尝试都如此就退出 2——拼错的命令不该变成一份看起来很像结论的仲裁记录。
 
 证据写到 `.signoff/disputes/<时间>-<id>.json`，含环境指纹（node 版本、平台、架构、git 短哈希、目录）。
 `--replay` 读回记录重跑同样的命令，比对结论：一致退出 0，变了退出 1。
@@ -159,7 +168,9 @@
 `signoff review --verify` · `signoff review --status` · `signoff review --list [--limit N]`
 
 存证能证明的只有一件事，但这件很关键：**评审过的 diff 和要发布的 diff 是同一份**。diff 的
-sha256 短哈希与评审一起写进 `.signoff/reviews.jsonl`；改动一个字节，hash 就变，旧评审自动失效。
+sha256 短哈希与评审一起写进仓库根的 `.signoff/reviews.jsonl`（在子目录 review 也落根，换目录
+`--verify` 仍看得见）；改动一个字节，hash 就变，旧评审自动失效。哈希前会抹掉 `index` 行——
+两侧 blob 的 id 只反映存储方式，同一处改动以 CRLF 提交进库不该让存证失效，所以绑的是内容与 mode。
 
 `--by` 与 `--model` 是**自述**——任何工具的「我审过了」都只是自述，这里不装作能验证谁真的读了代码。
 它验证的是绑定关系：`--verify` 重算当前暂存 diff（没有暂存改动则看工作区）的哈希，只有当存在一份
@@ -205,8 +216,11 @@ only Node 18+: there is no Python build and no degraded mode.
 - Result shape: `{"gate":"p1","ok":true,"elapsedMs":39,"budgetMs":180000,"cases":3}`. The case count is the largest
   number found in `N passed` / `N tests` / `N checks`.
 - Anti-tamper (`lib/integrity.js`): p1 asks not only "do the tests pass" but "is it still the same
-  test". It compares the working tree against a base (`SIGNOFF_BASE`, else the merge-base with
-  `origin/master`, else `HEAD~1`) and goes red on any of three things:
+  test". It compares the working tree against a base (`SIGNOFF_BASE`, else `HEAD`, so the diff is
+  exactly the staged plus unstaged change that is about to be committed) and goes red on any of three
+  things. The base is deliberately not the merge-base or `HEAD~1`: the gate judges what this commit
+  changes, not the previous commit again — otherwise one legitimate deletion would keep every later
+  commit red. Paths are read from `git -z`, so Chinese and spaced file names survive `core.quotepath`:
 
   | Signal | Meaning |
   | --- | --- |
@@ -319,9 +333,13 @@ missed one rolls the whole thing back:
 1. **the baseline must be red** — a fix without a reproducer is just extra change, so a green
    baseline exits 2;
 2. **the patch must stay inside `--scope`**; anything else is refused;
-3. **the verdict path cannot be patched by this loop**: `bin/`, `lib/p1..p5`/`guard`/`core`/
-   `integrity`/`secrets`/`fix`, `gates/`, `.github/workflows/`, `.signoff/`. Gate changes go through a
-   normal commit with a human reading the diff;
+3. **the verdict path cannot be patched by this loop**: `bin/`, `gates/`, `.github/`, `.signoff/`,
+   `package.json` and lock files, plus every module that reads the verdict (`p1..p5`, `guard`, `core`,
+   `integrity`, `secrets`, `fix`, `dispute`, `review`, `patterns`, `detect`, `runslog`, `report`, …).
+   Paths are normalised for case and separators first (`Lib/P1.js` is `lib/p1.js` on Windows), and only
+   inside the signoff-cli repository itself does a whole `lib/` count as a verdict path — in someone
+   else's repo `lib/` is ordinary source. Gate changes go through a normal commit with a human reading
+   the diff;
 4. **after the patch it must be red -> green, with anti-tamper clean and nothing else moved**
    (a new untracked file counts as moved).
 
@@ -349,7 +367,10 @@ repeatedly. Three outcomes, each with its own exit code:
 The third row is the one people skip. It turns "flaky" from an adjective into a score (p/N) and keeps
 the exit code, duration, stdout digest and tail of every attempt. No reproducer (`--run`) or no stated
 claim (`--claim`) exits 2; if the total time exceeds `--budget` it refuses to force a verdict, exits 2
-and says how many attempts ran.
+and says how many attempts ran. A command that could not run at all (a typo, not installed, not on
+PATH) is not a failure: those attempts count neither as pass nor as fail and write no evidence, and if
+every attempt is like that it exits 2 — a typo must not become an arbitration record that reads like a
+conclusion.
 
 Evidence goes to `.signoff/disputes/<time>-<id>.json` with an environment fingerprint (node version,
 platform, arch, git short hash, directory). `--replay` reads a record, reruns the same commands and
@@ -362,7 +383,10 @@ compares verdicts: same exits 0, changed exits 1.
 
 An attestation proves exactly one thing, and it is the thing that matters: **the diff that was
 reviewed is the diff being shipped**. The sha256 short hash of the diff is stored with the review in
-`.signoff/reviews.jsonl`; change one byte and the hash changes, so the old approval stops applying.
+`.signoff/reviews.jsonl` at the repository root (recording from a subdirectory still lands at the root,
+so `--verify` from anywhere sees it); change one byte and the hash changes, so the old approval stops
+applying. `index` lines are stripped before hashing: the two blob ids only describe storage, and the
+same change committed with CRLF must not invalidate an attestation, so the hash binds content and mode.
 
 `--by` and `--model` are self-declared — any tool saying "I reviewed it" is only saying so, and this
 does not pretend to verify that someone actually read the code. What it verifies is the binding:

@@ -6,7 +6,8 @@
 //
 //   node integrations/mcp/server.js
 //
-// Tools: signoff_run, signoff_status, signoff_doctor, signoff_audit, signoff_explain, signoff_report.
+// Tools: signoff_run, signoff_status, signoff_doctor, signoff_audit, signoff_explain, signoff_report,
+// signoff_review, signoff_dispute, signoff_patterns, signoff_fix (--check only).
 // Every tool forwards to `signoff <subcommand>` in the client's cwd and returns the
 // combined stdout/stderr plus the exit code, because the exit code is the verdict.
 
@@ -79,6 +80,69 @@ const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: "signoff_review",
+    description:
+      "Attest that a diff was reviewed (action=record, needs by), or verify that the diff being shipped is the one that was approved (action=verify, default). Proves binding, not that a human read the code.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["verify", "status", "list", "record"] },
+        by: { type: "string", description: "reviewer id, required for record" },
+        model: { type: "string" },
+        note: { type: "string" },
+        verdict: { type: "string", enum: ["approve", "reject"] },
+        limit: { type: "number" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "signoff_dispute",
+    description:
+      "Settle a pass/fail dispute by running the same reproducer N times: supported (exit 0), refuted (1), unresolved (3). A command that cannot run writes no evidence and exits 2.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        claim: { type: "string" },
+        run: { type: "array", items: { type: "string" }, description: "the reproducer command(s), in order" },
+        expect: { type: "string", enum: ["pass", "fail"] },
+        repeat: { type: "number" },
+        budget: { type: "number" },
+        replay: { type: "string", description: "replay an evidence json instead of running a new dispute" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "signoff_patterns",
+    description:
+      "Group repeated gate failures from .signoff/runs.log into patterns, so a failure that keeps coming back is visible instead of being 'fixed' the same way again.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        min: { type: "number", description: "occurrences before something counts as a pattern (default 2)" },
+        top: { type: "number" },
+        since: { type: "number", description: "look back N days" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "signoff_fix",
+    description:
+      "Preview the bounded repair loop without applying anything: is the baseline red, is the patch inside scope, does it touch a verdict path. Over MCP the patch is never applied.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        patch: { type: "string", description: "path to a unified diff" },
+        scope: { type: "array", items: { type: "string" } },
+        run: { type: "array", items: { type: "string" } },
+      },
+      required: ["patch"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 function callSignoff(argv) {
@@ -118,6 +182,45 @@ function runTool(name, args) {
       if (args && args.task) argv.push("--task", String(args.task));
       if (args && args.days) argv.push("--days", String(args.days));
       if (args && args.wouldBlock) argv.push("--would-block");
+      return callSignoff(argv);
+    }
+    case "signoff_review": {
+      const action = (args && args.action) || "verify";
+      const argv = ["review"];
+      if (action === "record") {
+        argv.push("--by", String((args && args.by) || ""));
+        if (args.model) argv.push("--model", String(args.model));
+        if (args.note) argv.push("--note", String(args.note));
+        if (args.verdict) argv.push("--verdict", String(args.verdict));
+        argv.push("--json");
+      } else if (action === "status") argv.push("--status");
+      else if (action === "list") argv.push("--list");
+      else argv.push("--verify");
+      if (args && args.limit) argv.push("--limit", String(args.limit));
+      return callSignoff(argv);
+    }
+    case "signoff_dispute": {
+      if (args && args.replay) return callSignoff(["dispute", "--replay", String(args.replay), "--json"]);
+      const argv = ["dispute", "--json"];
+      if (args && args.claim) argv.push("--claim", String(args.claim));
+      for (const cmd of (args && args.run) || []) argv.push("--run", String(cmd));
+      if (args && args.expect) argv.push("--expect", String(args.expect));
+      if (args && args.repeat) argv.push("--repeat", String(args.repeat));
+      if (args && args.budget) argv.push("--budget", String(args.budget));
+      return callSignoff(argv);
+    }
+    case "signoff_patterns": {
+      const argv = ["patterns"];
+      if (args && args.min) argv.push("--min", String(args.min));
+      if (args && args.top) argv.push("--top", String(args.top));
+      if (args && args.since) argv.push("--since", String(args.since));
+      return callSignoff(argv);
+    }
+    case "signoff_fix": {
+      // 只预览：--check 在基线红、scope 内、判定路径未碰时才退出 0，永不落盘。
+      const argv = ["fix", "--patch", String((args && args.patch) || ""), "--check"];
+      for (const sc of (args && args.scope) || []) argv.push("--scope", String(sc));
+      for (const cmd of (args && args.run) || []) argv.push("--run", String(cmd));
       return callSignoff(argv);
     }
     default:

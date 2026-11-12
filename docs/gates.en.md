@@ -16,8 +16,11 @@ only Node 18+: there is no Python build and no degraded mode.
 - Result shape: `{"gate":"p1","ok":true,"elapsedMs":39,"budgetMs":180000,"cases":3}`. The case count is the largest
   number found in `N passed` / `N tests` / `N checks`.
 - Anti-tamper (`lib/integrity.js`): p1 asks not only "do the tests pass" but "is it still the same
-  test". It compares the working tree against a base (`SIGNOFF_BASE`, else the merge-base with
-  `origin/master`, else `HEAD~1`) and goes red on any of three things:
+  test". It compares the working tree against a base (`SIGNOFF_BASE`, else `HEAD`, so the diff is
+  exactly the staged plus unstaged change that is about to be committed) and goes red on any of three
+  things. The base is deliberately not the merge-base or `HEAD~1`: the gate judges what this commit
+  changes, not the previous commit again — otherwise one legitimate deletion would keep every later
+  commit red. Paths are read from `git -z`, so Chinese and spaced file names survive `core.quotepath`:
 
   | Signal | Meaning |
   | --- | --- |
@@ -130,9 +133,13 @@ missed one rolls the whole thing back:
 1. **the baseline must be red** — a fix without a reproducer is just extra change, so a green
    baseline exits 2;
 2. **the patch must stay inside `--scope`**; anything else is refused;
-3. **the verdict path cannot be patched by this loop**: `bin/`, `lib/p1..p5`/`guard`/`core`/
-   `integrity`/`secrets`/`fix`, `gates/`, `.github/workflows/`, `.signoff/`. Gate changes go through a
-   normal commit with a human reading the diff;
+3. **the verdict path cannot be patched by this loop**: `bin/`, `gates/`, `.github/`, `.signoff/`,
+   `package.json` and lock files, plus every module that reads the verdict (`p1..p5`, `guard`, `core`,
+   `integrity`, `secrets`, `fix`, `dispute`, `review`, `patterns`, `detect`, `runslog`, `report`, …).
+   Paths are normalised for case and separators first (`Lib/P1.js` is `lib/p1.js` on Windows), and only
+   inside the signoff-cli repository itself does a whole `lib/` count as a verdict path — in someone
+   else's repo `lib/` is ordinary source. Gate changes go through a normal commit with a human reading
+   the diff;
 4. **after the patch it must be red -> green, with anti-tamper clean and nothing else moved**
    (a new untracked file counts as moved).
 
@@ -160,7 +167,10 @@ repeatedly. Three outcomes, each with its own exit code:
 The third row is the one people skip. It turns "flaky" from an adjective into a score (p/N) and keeps
 the exit code, duration, stdout digest and tail of every attempt. No reproducer (`--run`) or no stated
 claim (`--claim`) exits 2; if the total time exceeds `--budget` it refuses to force a verdict, exits 2
-and says how many attempts ran.
+and says how many attempts ran. A command that could not run at all (a typo, not installed, not on
+PATH) is not a failure: those attempts count neither as pass nor as fail and write no evidence, and if
+every attempt is like that it exits 2 — a typo must not become an arbitration record that reads like a
+conclusion.
 
 Evidence goes to `.signoff/disputes/<time>-<id>.json` with an environment fingerprint (node version,
 platform, arch, git short hash, directory). `--replay` reads a record, reruns the same commands and
@@ -173,7 +183,10 @@ compares verdicts: same exits 0, changed exits 1.
 
 An attestation proves exactly one thing, and it is the thing that matters: **the diff that was
 reviewed is the diff being shipped**. The sha256 short hash of the diff is stored with the review in
-`.signoff/reviews.jsonl`; change one byte and the hash changes, so the old approval stops applying.
+`.signoff/reviews.jsonl` at the repository root (recording from a subdirectory still lands at the root,
+so `--verify` from anywhere sees it); change one byte and the hash changes, so the old approval stops
+applying. `index` lines are stripped before hashing: the two blob ids only describe storage, and the
+same change committed with CRLF must not invalidate an attestation, so the hash binds content and mode.
 
 `--by` and `--model` are self-declared — any tool saying "I reviewed it" is only saying so, and this
 does not pretend to verify that someone actually read the code. What it verifies is the binding:

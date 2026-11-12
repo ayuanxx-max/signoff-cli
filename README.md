@@ -37,6 +37,11 @@ signoff report --html   # 一页只读看板（默认写 .signoff/report.html）
 
 装一次就够：每个新克隆 `signoff ensure` 会幂等地补齐钩子、配置和 CI，不用再记命令。
 
+判定之外还有四条命令：`signoff review`（评审存证，绑 diff 哈希，`--verify` 才算数）、
+`signoff fix`（有界修复循环：基线必须红、只动 scope 内、判定路径不改）、`signoff dispute`
+（同一复现跑 N 次，分出成立 / 推翻 / 不定）、`signoff patterns`（同一个地方反复红的模式库）。细节见
+`docs/gates.md`。
+
 ---
 
 ## 2. 七道关：它到底挡什么
@@ -198,6 +203,11 @@ signoff report --html   # one read-only page (writes .signoff/report.html by def
 ```
 
 Once per machine is enough: `signoff ensure` idempotently fills in hooks, config and CI for every new clone.
+
+Beyond the gates there are four more commands: `signoff review` (an attestation bound to a diff hash;
+only `--verify` counts), `signoff fix` (bounded repair loop: red baseline, in-scope only, verdict paths
+untouchable), `signoff dispute` (run one reproducer N times and get supported / refuted / unresolved),
+`signoff patterns` (a library of failures that repeat in the same place). Details in `docs/gates.md`.
 
 ---
 

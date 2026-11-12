@@ -1,5 +1,28 @@
 ## Unreleased
 
+- 修（P0，静默放行三处）：`integrity`、`review`、`fix` 原来都拿正则去啃 git 的人类可读输出，
+  路径含中文/空格时被 `core.quotepath` 转义成八进制，匹配不上就被当成"没有改动"——删掉
+  `tests/测试.test.js` 的断言仍判 clean，中文名 diff 被说成 `nothing to review`，`Lib/P1.js`
+  能覆盖 `lib/p1.js`。现统一走 `git -z`（`core.gitNameStatus` / `gitNameOnly`），黑名单先归一
+  大小写与分隔符，并把 `dispute`/`review`/`patterns`/`detect`/`runslog`/`package.json` 及锁文件
+  一并列入判定路径；只有 signoff-cli 自己的仓库才把整个 `lib/` 当判定路径。
+- 修：`dispute` 不再把拼错的命令当证据（命令解析不到记 not-run，不计 pass/fail、不写记录，退出 2；
+  判断不靠 stderr 文本，cp936 下 cmd.exe 的提示是乱码），`--budget` 现在带 timeout 与 SIGKILL。
+- 修：`integrity` 的 base 默认改成 `HEAD`，只判这次要提交的内容；之前用 merge-base/`HEAD~1`，
+  一个合法删断言的提交会让它之后每次提交都红。
+- 修：`SIGNOFF_ENGINE=python` 跑 p1 时补判一次 `integrity`——python 参考门里没有反作弊，换引擎
+  不该等于换一套判据。
+- 修：`uninstall` 收走新增状态（`reviews.jsonl`、`fix-log.jsonl`、`cache/`、`disputes/`），`--all`
+  连 `integrity-allow.json` 一起删并报出豁免条数，剩下的每一件都在 `kept:` 里点名。
+- 修：`doctor` 新增 `integrity-allow` 检查，写坏的豁免不再被静默吞成空数组。
+- 修：`fix` 认引号+八进制转义的补丁路径、重命名两侧、`--scope` 的反斜杠与 `.`，`git apply`
+  因 CRLF 失败时按 `--ignore-whitespace` 重试并明说换行不一致。
+- 修：`review` 的存证落仓库根（子目录 review 也能在根 `--verify`），哈希前抹掉 `index` 行，
+  CRLF 被提交进库不再让存证失效。
+- 文档：README（中英）、`docs/gates.md`（中英）、`integrations/skill/SKILL.md` 补上
+  `review`/`fix`/`dispute`/`patterns`；MCP 新增 `signoff_review`、`signoff_fix`（仅 `--check`
+  预览）、`signoff_dispute`、`signoff_patterns` 四个工具。
+
 本机自用，未发布。以下五项只在本仓库检出里生效，
 pm 上的 latest 仍是 4.7.1。
 
