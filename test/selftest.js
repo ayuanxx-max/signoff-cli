@@ -16,9 +16,24 @@ const FAIL = [];
 const AUDIT = [];
 let HOME = "";
 
+// 可选计时：SIGNOFF_TIMING=1 时记录每条用例之间的真实间隔（用例本身是同步的，
+// 时间花在它自己 spawn 的东西上），结束后按耗时排出前 12 名——压时间先看数据。
+const TIMING = [];
+let TIMING_AT = Date.now();
+// 反向对照（lib/negative.js）只问一件事：这些测试在旧代码上会不会红。
+// 第一条红就够了，继续跑完剩下的 600 条只是在替一个已经成立的结论付钱。
+const FAIL_FAST = process.env.SIGNOFF_NC === "1";
 function check(name, got, want, extra) {
   const ok = got === want;
+  const now = Date.now();
+  if (process.env.SIGNOFF_TIMING === "1") TIMING.push([now - TIMING_AT, name]);
+  TIMING_AT = now;
   (ok ? PASS : FAIL).push(`${name}: got=${got} want=${want}${extra ? " " + extra : ""}`);
+  if (!ok && FAIL_FAST) {
+    for (const line of FAIL) console.log(`FAIL ${line}`);
+    console.log(`\n${PASS.length} passed, ${FAIL.length} failed (stopped at the first red: negative control)`);
+    process.exit(1);
+  }
 }
 
 function run(args, cwd, env) {
@@ -2269,6 +2284,13 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);
   for (const line of PASS) console.log(`PASS ${line}`);
   for (const line of FAIL) console.log(`FAIL ${line}`);
+  if (process.env.SIGNOFF_TIMING === "1") {
+    const total = TIMING.reduce((n, t) => n + t[0], 0);
+    console.log(`\nslowest ${Math.min(12, TIMING.length)} of ${TIMING.length} cases (total ${(total / 1000).toFixed(1)} s):`);
+    for (const [ms, name] of TIMING.slice().sort((a, b) => b[0] - a[0]).slice(0, 12)) {
+      console.log(`  ${String(ms).padStart(6)} ms  ${name}`);
+    }
+  }
   console.log(`\n${PASS.length} passed, ${FAIL.length} failed`);
   return FAIL.length ? 1 : 0;
 }
