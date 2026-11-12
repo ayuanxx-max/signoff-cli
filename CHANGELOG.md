@@ -8,6 +8,9 @@
 - `.signoff/cache.json` 的键加上运行模式（`fast` / `full`）：快检通过不能替推送那一次的全套作保。
 - 本仓库新增 `node test/smoke.js`（`npm run test:fast`，8 项，约 2.4 s）：断言落在真正渲染出的页面 chip 上，
   不是源码里的字符串——2026-11-12 那次「把端到端断言降级成源码匹配」就发生在这条路径上。
+- 新增 `signoff p1 --negative-control`：把这次改过的测试文件放进 `git worktree` 检出的 base 版本里跑一遍，
+  **必须红**。两棵树都绿判红（`green-on-base`），在 base 上跑不起来单列 `cannot-run-on-base`，不冒充「测出来了」。
+  推送与 CI 自动带上；只有 touched 非空才付这笔钱，`--nc-budget` 默认 180 s，超时算红。
 
 ### 界面：金额带词、版面有据可查
 

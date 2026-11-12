@@ -111,6 +111,37 @@ function main() {
     r = run(["p1", "--run", `"${process.execPath}" -e "process.exit(1)"`], repo);
     check("p1 fail on rc!=0", r.status, 1);
 
+    // 反作弊执行层：改过的测试必须在 base 上红；永远为真的测试在这里被抓住。
+    const nrepo = path.join(base, "nc-repo");
+    fs.mkdirSync(nrepo, { recursive: true });
+    const nw = (p, s) => fs.writeFileSync(path.join(nrepo, p), s, "utf8");
+    fs.mkdirSync(path.join(nrepo, "test"), { recursive: true });
+    nw("impl.js", "module.exports = 'v1';\n");
+    nw("test/t.js", "const assert = require('assert');\nassert.strictEqual(require('../impl.js'), 'v1');\nconsole.log('1 passed');\n");
+    git(["init", "-q"], nrepo);
+    git(["config", "user.email", "t@t"], nrepo);
+    git(["config", "user.name", "t"], nrepo);
+    git(["add", "-A"], nrepo);
+    git(["commit", "-qm", "base"], nrepo);
+    // 新实现 + 新断言：落盘这棵树是绿的，但在 base 上必须红
+    nw("impl.js", "module.exports = 'v2';\n");
+    nw("test/t.js", "const assert = require('assert');\nassert.strictEqual(require('../impl.js'), 'v2');\nconsole.log('1 passed');\n");
+    const nc = (extra) =>
+      run(["p1", "--run", `"${process.execPath}" test/t.js`, "--negative-control", ...(extra || [])], nrepo, {
+        SIGNOFF_NO_CACHE: "1",
+      });
+    r = nc();
+    check("negative control goes green", r.status, 0, (r.stdout || "").trim().split("\n").pop());
+    // 永远为真的断言：两棵树都绿，正是这一层要抓的那种「测试」
+    nw("test/t.js", "const assert = require('assert');\nassert.ok(true);\nconsole.log('1 passed');\n");
+    r = nc();
+    check("negative control catches a test that cannot fail", r.status, 1, (r.stdout || "").trim().split("\n").pop());
+    // 不改测试文件就不该付这笔钱
+    r = run(["p1", "--run", `"${process.execPath}" -e "console.log('1 passed')"`, "--negative-control"], repo, {
+      SIGNOFF_NO_CACHE: "1",
+    });
+    check("negative control skips without touched tests", /negative-control skipped/.test(r.stdout) ? 1 : 0, 1, (r.stdout || "").trim().split("\n").pop());
+
     // P2
     r = run(["p2", "--strict", "--json"], repo);
     check("p2 pass", r.status, 0);

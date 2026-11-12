@@ -34,6 +34,11 @@
 `.signoff/integrity-allow.json`（`file` / `kind` / `needle` / `reason`，理由 ≥20 字），
 声明留在 diff 里供评审——闸门禁止的是"悄悄地"放宽。缓存命中与 docs-only 快路径同样会跑这一步。
 
+还有一层是执行出来的（`--negative-control`，推送与 CI 自动带上）：把这次改过的测试文件放进 `git worktree`
+检出的 base 版本里跑一遍，**必须红**。两棵树都绿，说明这条测试证明不了这次改动；在 base 上跑不起来
+（缺模块 / 语法错）单列成 `cannot-run-on-base`，不冒充「测出来了」。只有 touched 非空才付这笔钱，
+`--nc-budget`（默认 180 s）超时算红。
+
 ## p2 覆盖率
 
 `signoff p2 [--min-scenario N] [--min-assertions N] [--strict] [--md FILE] [--json]`
@@ -108,7 +113,7 @@
 | 场景 | 跑的关 |
 | --- | --- |
 | 暂存了 README、`docs/` 下的文件 | p5 |
-| 探到测试命令（`package.json` 的 test，或 pytest） | p1（提交跑 `test:fast`，推送跑全套） |
+| 探到测试命令（`package.json` 的 test，或 pytest） | p1（提交跑 `test:fast`，推送跑全套 + 反向对照） |
 | 存在 `verify/scenarios/` | p2 `--strict` |
 | 存在账本（仓库内或 `~/.signoff/audit.log`） | p4 `verify` |
 | 暂存内容里有疑似密钥 | sec |
