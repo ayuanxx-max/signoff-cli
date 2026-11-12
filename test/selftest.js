@@ -25,6 +25,7 @@ let TIMING_AT = Date.now();
 const FAIL_FAST = process.env.SIGNOFF_NC === "1";
 function check(name, got, want, extra) {
   const ok = got === want;
+  ONCE.clear();
   const now = Date.now();
   if (process.env.SIGNOFF_TIMING === "1") TIMING.push([now - TIMING_AT, name]);
   TIMING_AT = now;
@@ -36,8 +37,19 @@ function check(name, got, want, extra) {
   }
 }
 
+// 每条用例的耗时大部分花在它 spawn 的子进程上；按命令名聚合，能看出哪类调用值得减。
+const SPAWNS = new Map();
+// 同一个用例里重复问同一件只读的事（"再看一眼 --since-install" 那种）没有新信息，
+// 但每次都要付一遍 node 启动 + 仓库扫描。缓存只在一条用例内有效，check() 一开始就清空：
+// 用例之间会改状态，跨用例缓存会把旧结论当新结论。
+const READ_ONLY = new Set(["report", "audit", "doctor", "status", "explain", "patterns", "tokens", "p2", "p4", "p5", "secrets", "cov"]);
+const ONCE = new Map();
 function run(args, cwd, env) {
-  return spawnSync(process.execPath, [CLI, ...args], {
+  const k = String(args[0] || "");
+  const onceKey = `${cwd}|${args.join(" ")}|${JSON.stringify(env || {})}`;
+  if (READ_ONLY.has(k) && ONCE.has(onceKey)) return ONCE.get(onceKey);
+  const t0 = Date.now();
+  const r = spawnSync(process.execPath, [CLI, ...args], {
     cwd,
     encoding: "utf8",
     // A report for a busy repo is far bigger than the 1 MB spawnSync default.
@@ -47,6 +59,14 @@ function run(args, cwd, env) {
       // 页面语言在测试里固定成中文：CI 的系统区域是 en，跟随系统会让中文断言随机变红。
       SIGNOFF_LANG: "zh", ...(env || {}) },
   });
+  if (process.env.SIGNOFF_TIMING === "1") {
+    const rec = SPAWNS.get(k || "(none)") || { n: 0, ms: 0 };
+    rec.n += 1;
+    rec.ms += Date.now() - t0;
+    SPAWNS.set(k || "(none)", rec);
+  }
+  if (READ_ONLY.has(k)) ONCE.set(onceKey, r);
+  return r;
 }
 
 // Fixture repos are not the user's machine: keep the machine-wide dispatcher out of the
@@ -118,6 +138,7 @@ function main() {
     const repo = buildRepo(base);
     const shim = makeShim(base);
 
+    // ==== selftest shard A ====
     // P1
     let r = run(["p1", "--run", `"${process.execPath}" -e "console.log('3 passed')"`], repo);
     check("p1 pass", r.status, 0);
@@ -1324,6 +1345,7 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
 
   // 18. `signoff report`: one self-contained, read-only page — a verdict, a month
   // calendar, one-at-a-time tasks — plus the same data as JSON.
+    // ==== selftest shard split ====
   {
     const base = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-report-"));
     try {
@@ -1569,7 +1591,9 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
 
   // 场景卡是覆盖率声明：卡里点名的每个断言，都必须是这条自测里真实存在的 check。
   {
-    const source = fs.readFileSync(__filename, "utf8");
+    // 读 selftest.js 本身而不是 __filename：并行跑分片时 __filename 是临时分片文件，
+    // 拿它当"全套用例的源码"会把另一段的用例误判成伪造的。
+    const source = fs.readFileSync(path.join(__dirname, "selftest.js"), "utf8");
     const sdir = path.join(__dirname, "..", "verify", "scenarios");
     const files = fs.existsSync(sdir) ? fs.readdirSync(sdir).filter((f) => f.endsWith(".json")).sort() : [];
     check("scenario cards exist", files.length >= 3, true, `${files.length} files`);
@@ -2290,6 +2314,9 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     for (const [ms, name] of TIMING.slice().sort((a, b) => b[0] - a[0]).slice(0, 12)) {
       console.log(`  ${String(ms).padStart(6)} ms  ${name}`);
     }
+    const byCmd = [...SPAWNS.entries()].sort((a, b) => b[1].ms - a[1].ms).slice(0, 12);
+    console.log("\nspawn cost by command (count / total):");
+    for (const [name, v] of byCmd) console.log(`  ${String(v.n).padStart(4)}x  ${(v.ms / 1000).toFixed(1)} s  ${name}`);
   }
   console.log(`\n${PASS.length} passed, ${FAIL.length} failed`);
   return FAIL.length ? 1 : 0;

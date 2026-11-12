@@ -55,7 +55,7 @@
     "signoff-cli"
   ],
   "scripts": {
-    "test": "node test/selftest.js",
+    "test": "node test/run-all.js",
     "test:fast": "node test/smoke.js",
     "parity": "python test/selftest.py",
     "arch": "node tools/arch-health.mjs",

@@ -3,3 +3,5 @@ node_modules/
 .signoff-home/
 *.tgz
 __pycache__/
+
+test/.shard-*.js
