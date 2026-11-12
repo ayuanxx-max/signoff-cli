@@ -1,5 +1,16 @@
 ## Unreleased
 
+### 界面：金额带词、版面有据可查
+
+- 侧栏任务行的金额从裸 `$0.02` 改成 `费用 $0.02`（英文 `cost $0.02`）；看板上的每一处金额同样先出词再出数，
+  `class="cost"` 的可见文本一律形如 `费用 $…`。
+- 看板的「花费」表头统一成「费用」，与行内标签同一个词；中文小节标题不再被 `text-transform: uppercase`
+  拉成「TOKEN 与费用」。
+- 新增 `docs/DESIGN.md`：间距、字号、状态色、文案口径，以及提交前要自问的三句。
+- 新增 `node tools/ui-shot.js`：用本机常驻浏览器给看板出图（`docs/ui/board-{zh,en}.png`），改版面先看图。
+- 新增 `jsconfig.json` + `npm run typecheck`（`typescript` / `@types/node` 只在开发时用，运行时依赖仍是零）。
+
+
 - 新：看板加「Token 与费用」——累计 token、金额、按天、每组任务、每条提交的 agent 花费；
   `signoff tokens` 在终端问同一件事（`--json` / `--md`）。数据取自本机 DSH 会话记录里的
   `assistant/message.usage`（只读，不含外链、不发请求），金额按 DeepSeek 官方峰/谷价估算，

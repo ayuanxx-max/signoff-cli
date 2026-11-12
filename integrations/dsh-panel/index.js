@@ -76,6 +76,7 @@ export async function state(config) {
   return { ok: true, root, updatedAt: index ? index.updatedAt : null, repos: cards };
 }
 
+/** @returns {[string, string[]]} */
 function opener(file) {
   if (process.platform === "win32") return ["cmd", ["/c", "start", "", file]];
   if (process.platform === "darwin") return ["open", [file]];

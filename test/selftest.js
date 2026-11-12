@@ -2186,6 +2186,15 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     check("tokens: --no-tokens reports unavailable instead of a zero", noTok.tokens.available, false);
     const withTok = JSON.parse(run(["report", "--json"], tokRepo).stdout);
     check("tokens: report always carries the token block", typeof withTok.tokens, "object");
+    // 页面上的金额也要有词：裸 $0.02 会被读成别的单位（面板行上报过同一个问题）。
+    // 端到端那条路要造会话缓存，这里直接盯渲染源：chip 必须先出词再出数。
+    const reportSrc = fs.readFileSync(path.join(__dirname, "..", "lib", "report.js"), "utf8");
+    check(
+      "page cost chips are labelled",
+      /T\("费用"\)\} \$\{esc\(tk\.money\(t\.cost\)\)\}/.test(reportSrc) &&
+        /T\("费用"\)\} \$\{esc\(tk\.money\(c\.cost\)\)\}/.test(reportSrc),
+      true
+    );
   }
 
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);
