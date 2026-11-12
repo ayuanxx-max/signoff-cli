@@ -25,6 +25,9 @@ git add -A && git commit # 钩子会跑 p1 + secrets
 
 ## 发布
 
+**发布口令（2026-11-11）：只有用户说出「发布 x.x.x」（带明确版本号）才走下面这条流程；其余说法一律只提交。**
+「暂不发布、只进本地仓库」= 只 commit 到本地 master，origin 落后是正常的，不 push、不 tag、不发 npm。
+
 发布流程：`npm test` → `signoff p5` → `signoff release --pre` → `npm publish` → 打 tag 推送 →
 `signoff release --post`。版本号、`package.json`、`server.json`、`CHANGELOG.md`、`git tag` 必须一致；
 `signoff report` 的「发布」项会现算这几件事，不一致就是红。
