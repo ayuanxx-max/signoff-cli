@@ -1674,6 +1674,67 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     const integBase = require(path.join(ROOT, "lib", "integrity.js")).resolveBase(p0repo);
     check("integrity: the base is HEAD", integBase, gitOut(["rev-parse", "HEAD"], p0repo).trim());
 
+    // 补丁解析要看懂 git 的引号与八进制转义（中文/空格路径），否则中文目录里 fix 永远说"补丁没碰到文件"。
+    const quoted = 'diff --git "a/\\346\\265\\213\\350\\257\\225.test.js" "b/\\346\\265\\213\\350\\257\\225.test.js"';
+    check("fix: a git-quoted patch path is decoded", cnFix.parsePatch(quoted).join(","), "测试.test.js");
+    check("fix: a spaced patch path survives", cnFix.parsePatch("diff --git a/lib/my helper.js b/lib/my helper.js").join(","), "lib/my helper.js");
+    check("fix: a backslash scope still matches", cnFix.outOfScope(["lib/a.js"], ["lib\\"]).length, 0);
+    check("fix: a dot scope means everything", cnFix.outOfScope(["lib/a.js"], ["."]).length, 0);
+
+    // 重命名在 status -z 里是两条字段：别再切出 "/old.js"
+    fs.writeFileSync(path.join(p0repo, "mv-src.js"), "module.exports = 5;\n", "utf8");
+    git(["add", "-A"], p0repo);
+    git(["commit", "-qm", "for rename"], p0repo);
+    git(["mv", "mv-src.js", "mv-dst.js"], p0repo);
+    const changedNow = cnFix.changedFiles(p0repo);
+    check("fix: a rename yields the new path", changedNow.includes("mv-dst.js"), true);
+    check("fix: a rename yields no mangled path", changedNow.some((p) => p.startsWith("/")), false);
+
+    // 在子目录 review：存证落在仓库根，换目录 --verify 也看得见
+    const subDir = path.join(p0repo, "sub");
+    fs.mkdirSync(subDir, { recursive: true });
+    fs.writeFileSync(path.join(subDir, "s.js"), "module.exports = 6;\n", "utf8");
+    git(["add", "-A"], p0repo);
+    const subReview = run(["review", "--by", "me"], subDir, p0env);
+    check("review: recording from a subdirectory works", subReview.status, 0);
+    check("review: the ledger lands at the repo root", fs.existsSync(path.join(p0repo, ".signoff", "reviews.jsonl")), true);
+    check("review: no ledger inside the subdirectory", fs.existsSync(path.join(subDir, ".signoff", "reviews.jsonl")), false);
+
+    // 同一处改动，LF 与"CRLF 被提交进库"的 hash 必须一致：存证绑内容，不绑 blob id
+    const lineRepo = (content) => {
+      const base = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-eol-"));
+      const rp = path.join(base, "repo");
+      fs.mkdirSync(rp, { recursive: true });
+      git(["init", "-q"], rp);
+      git(["config", "user.email", "t@example.com"], rp);
+      git(["config", "user.name", "t"], rp);
+      git(["config", "core.autocrlf", "false"], rp);
+      fs.writeFileSync(path.join(rp, "a.js"), "module.exports = 1;\n", "utf8");
+      git(["add", "-A"], rp);
+      git(["commit", "-qm", "base"], rp);
+      fs.writeFileSync(path.join(rp, "a.js"), content, "utf8");
+      git(["add", "a.js"], rp);
+      return rp;
+    };
+    const revmod = require(path.join(ROOT, "lib", "review.js"));
+    const hLf = revmod.diffInfo(lineRepo("module.exports = 2;\n")).hash;
+    const hCrlf = revmod.diffInfo(lineRepo("module.exports = 2;\r\n")).hash;
+    check("review: committed CRLF does not change the hash", hCrlf, hLf);
+
+    // 卸载要把新状态一起收走；写坏的豁免必须被 doctor 点名
+    const allowFile = path.join(p0repo, ".signoff", "integrity-allow.json");
+    fs.writeFileSync(allowFile, "{not json", "utf8");
+    const docBad = run(["doctor"], p0repo, { ...p0env, SIGNOFF_LANG: "en" });
+    check("doctor: an unparseable allowlist is named", /integrity-allow/.test(String(docBad.stdout)), true);
+    fs.writeFileSync(
+      allowFile,
+      JSON.stringify([{ file: "t.test.js", kind: "removed-assertion", reason: "客户要求删掉这条断言，工单 2026-11", needle: "assert" }]),
+      "utf8"
+    );
+    const un = run(["uninstall", "--all"], p0repo, p0env);
+    check("uninstall: --all drops the waivers", fs.existsSync(allowFile), false);
+    check("uninstall: --all says what it removed", /waiver/.test(String(un.stdout)), true);
+
     // 评审存证：hash 才是主张，签名是自述
     const rev = require(path.join(ROOT, "lib", "review.js"));
     check("review: diffInfo hashes the staged diff", typeof rev.diffInfo, "function");
