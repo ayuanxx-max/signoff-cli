@@ -2054,6 +2054,110 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     }
   }
 
+  // ---------------------------------------------------------------- token 与费用
+  // 三个数字必须同口径：价格按峰谷、归属按「上一次提交到这一次」的区间、读不到就报读不到。
+  {
+    const tkmod = require(path.join(ROOT, "lib", "tokens.js"));
+    const tpk = tkmod.DEFAULTS;
+    const peakMon = Date.UTC(2026, 10, 9, 2, 0, 0); // 周一 02:00 UTC = 峰时
+    const offMon = Date.UTC(2026, 10, 9, 5, 0, 0); // 周一 05:00 UTC = 谷时
+    const sat = Date.UTC(2026, 10, 7, 2, 0, 0); // 周六 02:00 UTC = 谷时
+    check("tokens: weekday 02:00 UTC is peak", tkmod.isPeak(peakMon, tpk), true);
+    check("tokens: weekday 05:00 UTC is off-peak", tkmod.isPeak(offMon, tpk), false);
+    check("tokens: weekends are off-peak", tkmod.isPeak(sat, tpk), false);
+
+    const call = (u) => tkmod.costOf(u, tpk, peakMon).cost;
+    check("tokens: 1M cache-miss input at peak costs the list price", call({ input: 1e6, model: "deepseek-flash" }), 0.3);
+    check(
+      "tokens: the same call off-peak costs half",
+      tkmod.costOf({ input: 1e6, model: "deepseek-flash" }, tpk, offMon).cost,
+      0.15
+    );
+    check("tokens: cache reads use the hit price", call({ cacheRead: 1e6, model: "deepseek-flash" }), 0.006);
+    check("tokens: output uses the output price", call({ output: 1e6, model: "deepseek-flash" }), 1.2);
+    check("tokens: the session dir slug follows the DSH rule", tkmod.slugOf("E:\\DSH.Jack.01"), "--E-DSH.Jack.01--");
+
+    const at = (d, t) => Date.parse(`${d}T${t}`);
+    const tokCommits = [
+      { sha: "c3", date: "2026-11-12", time: "12:00:00" },
+      { sha: "c2", date: "2026-11-11", time: "12:00:00" },
+      { sha: "c1", date: "2026-11-10", time: "12:00:00" },
+    ];
+    const tokEvents = [
+      [at("2026-11-10", "09:00:00"), 1000, 0, 0, 0, "deepseek-flash"], // 第一次提交之前
+      [at("2026-11-10", "18:00:00"), 2000, 100, 0, 0, "deepseek-flash"], // → c1
+      [at("2026-11-11", "18:00:00"), 3000, 100, 0, 0, "deepseek-flash"], // → c2
+    ];
+    const folded = tkmod.fold(tokEvents, tpk, tokCommits);
+    check("tokens: usage before the first commit is not charged to it", folded.before.tokens, 1000);
+    check("tokens: usage after a commit is charged to that commit", folded.byCommit.get("c1").tokens, 2100);
+    check("tokens: the next commit only gets its own window", folded.byCommit.get("c2").tokens, 3100);
+    check("tokens: every event is counted exactly once", folded.totals.tokens, 6200);
+    check("tokens: cost is positive when there is usage", folded.totals.cost > 0, true);
+
+    // 端到端：一个真的 zstd 会话文件，从「读到 → 折成一次调用」走通。
+    const zlib = require("zlib");
+    const tokRepo = path.join(base, "tokrepo");
+    fs.mkdirSync(tokRepo, { recursive: true });
+    fs.writeFileSync(path.join(tokRepo, "README.md"), "# tok\n", "utf8");
+    git(["init", "-q"], tokRepo);
+    git(["config", "user.email", "t@t"], tokRepo);
+    git(["config", "user.name", "t"], tokRepo);
+    git(["add", "-A"], tokRepo);
+    git(
+      ["commit", "-qm", "init"],
+      tokRepo,
+      {
+        GIT_AUTHOR_DATE: new Date(Date.now() - 3600 * 1000).toISOString(),
+        GIT_COMMITTER_DATE: new Date(Date.now() - 3600 * 1000).toISOString(),
+      }
+    );
+    const head = gitOut(["rev-parse", "--short", "HEAD"], tokRepo).trim();
+    const sessionsDir = path.join(base, "tok-sessions");
+    const sdir = path.join(sessionsDir, tkmod.slugOf(tokRepo), "session-1");
+    fs.mkdirSync(sdir, { recursive: true });
+    const now = Date.now();
+    const lines =
+      [
+        JSON.stringify({ type: "session", time: now - 5000, data: {} }),
+        JSON.stringify({
+          type: "assistant/message",
+          time: now - 1000,
+          data: {
+            usage: { inputTokens: 1000, outputTokens: 100, cacheReadTokens: 500, cacheWriteTokens: 0, totalTokens: 1600 },
+            message: { model: "deepseek-flash" },
+          },
+        }),
+        // 撕裂的末行，不该让整次统计崩掉
+        '{"type":"assistant/message","time":',
+      ].join("\n") + "\n";
+    fs.writeFileSync(path.join(sdir, "session.v4.jsonl.zstd"), zlib.zstdCompressSync(Buffer.from(lines, "utf8")));
+    const saved = { sessions: process.env.SIGNOFF_SESSIONS, cache: process.env.SIGNOFF_CACHE_DIR };
+    process.env.SIGNOFF_SESSIONS = sessionsDir;
+    process.env.SIGNOFF_CACHE_DIR = path.join(base, "tok-cache");
+    let got = null;
+    try {
+      got = tkmod.foldFor(tokRepo, { refresh: true });
+    } finally {
+      if (saved.sessions === undefined) delete process.env.SIGNOFF_SESSIONS;
+      else process.env.SIGNOFF_SESSIONS = saved.sessions;
+      if (saved.cache === undefined) delete process.env.SIGNOFF_CACHE_DIR;
+      else process.env.SIGNOFF_CACHE_DIR = saved.cache;
+    }
+    check("tokens: a session file is read back through zstd", got.available, true);
+    check("tokens: the fixture session yields exactly one call", got.totals.calls, 1);
+    check("tokens: the fixture call has 1600 tokens", got.totals.tokens, 1600);
+    check("tokens: the fixture call is attributed to the commit after it", (got.byCommit.get(head) || {}).tokens, 1600);
+    check("tokens: the cache is written outside the repo", fs.existsSync(path.join(base, "tok-cache")), true);
+    check("tokens: nothing is written into the repo", fs.existsSync(path.join(tokRepo, ".signoff", "tokens.json")), false);
+
+    // 只读契约：report 不因为多了一块 token 就往仓库里写东西
+    const noTok = JSON.parse(run(["report", "--json", "--no-tokens"], tokRepo).stdout);
+    check("tokens: --no-tokens reports unavailable instead of a zero", noTok.tokens.available, false);
+    const withTok = JSON.parse(run(["report", "--json"], tokRepo).stdout);
+    check("tokens: report always carries the token block", typeof withTok.tokens, "object");
+  }
+
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);
   for (const line of PASS) console.log(`PASS ${line}`);
   for (const line of FAIL) console.log(`FAIL ${line}`);

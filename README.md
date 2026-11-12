@@ -40,7 +40,7 @@ signoff report --html   # 一页只读看板（默认写 .signoff/report.html）
 判定之外还有四条命令：`signoff review`（评审存证，绑 diff 哈希，`--verify` 才算数）、
 `signoff fix`（有界修复循环：基线必须红、只动 scope 内、判定路径不改）、`signoff dispute`
 （同一复现跑 N 次，分出成立 / 推翻 / 不定）、`signoff patterns`（同一个地方反复红的模式库）。细节见
-`docs/gates.md`。
+`docs/gates.md`。账单也用同一套数：`signoff tokens`（`--json` / `--md`），看板上就是「Token 与费用」那一块。
 
 ---
 
@@ -70,6 +70,9 @@ signoff report --html   # 一页只读看板（默认写 .signoff/report.html）
 - `signoff report --html`：一个自包含单文件（离线可开、无外链），七个徽章 + 月历 + 按任务。
 - **按项目名说话**：每组任务写成「SignOff 项目更新 4.4.x 版」，最近一次跑闸同一写法；没有版本号的组回落成「SignOff · 区域」。
 - **DSH 菜单里的 SignOff 看板**：列出一页数据（判决、七关、最近一次跑闸、组任务），满一页才出现「打开完整页面」。
+- **Token 与费用**：累计 token、金额（DeepSeek 官方峰谷价）、按天、每组任务、每条提交各花了多少。
+  数据是本机 DSH 会话记录的只读汇总；读不到就写清原因，不写 0。闸门本身不消耗 token，所以这一块说的是
+  「产出这次提交的 agent 花费」。`--no-tokens` 关掉这一块。
 - 多仓库：`signoff report --repos a,b` 或 `signoff report --scan ~/code`，每仓单独判定，不合并。
 - 给别的机器 / 别的 agent：`signoff report --html --mount` 写到 `~/.signoff/reports`，面板读的就是它。
 
@@ -240,6 +243,10 @@ Three red lines are never relaxed in any mode: `--no-verify`, `SIGNOFF_SKIP=1`, 
   labelled the same way; a group with no version falls back to "SignOff · area".
 - **The SignOff panel in the DSH menu**: lists one page of data (verdict, seven gates, last gate run, task groups) and
   only shows "Open full page" once that page is full.
+- **Tokens & cost**: running total, money at DeepSeek's peak/off-peak list price, plus per day, per task group and
+  per commit. A read-only summary of local DSH session records; when they are missing the block says why instead of
+  showing zero. Gates themselves spend no tokens, so this is the agent spend that produced the commits.
+  --no-tokens turns the block off.
 - Several repositories: `signoff report --repos a,b` or `signoff report --scan ~/code` — each repo keeps its own verdict.
 - For another machine or another agent: `signoff report --html --mount` writes to `~/.signoff/reports`, which is what
   the panel reads.

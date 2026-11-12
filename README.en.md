@@ -74,6 +74,10 @@ Three red lines are never relaxed in any mode: `--no-verify`, `SIGNOFF_SKIP=1`, 
   labelled the same way; a group with no version falls back to "SignOff · area".
 - **The SignOff panel in the DSH menu**: lists one page of data (verdict, seven gates, last gate run, task groups) and
   only shows "Open full page" once that page is full.
+- **Tokens & cost**: running total, money at DeepSeek's peak/off-peak list price, plus per day, per task group and
+  per commit. A read-only summary of local DSH session records; when they are missing the block says why instead of
+  showing zero. Gates themselves spend no tokens, so this is the agent spend that produced the commits.
+  --no-tokens turns the block off.
 - Several repositories: `signoff report --repos a,b` or `signoff report --scan ~/code` — each repo keeps its own verdict.
 - For another machine or another agent: `signoff report --html --mount` writes to `~/.signoff/reports`, which is what
   the panel reads.

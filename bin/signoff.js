@@ -73,6 +73,7 @@ signoff release [--pre|--post] [--json]     does the published artifact actually
   signoff review --by ID [--model P/M]       bind an approval to a diff hash, so a changed
                                              diff cannot inherit it; --verify checks the pair
   signoff patterns [--min N] [--md FILE]     recurring failures from runs.log + the ledger
+  signoff tokens [--days N] [--json]          token 与费用：按天/按提交，数据来自 DSH 会话记录（只读）
   signoff dispute --claim T --run CMD        settle a disagreement by rerunning it: N times pass,
                                              refuted if it always fails, exit 3 if it is flaky
   signoff dispute --replay FILE              re-run a recorded dispute and compare verdicts
@@ -248,6 +249,7 @@ if (cmd === "fix") process.exit(require("../lib/fix.js").run(rest));
 if (cmd === "dispute") process.exit(require("../lib/dispute.js").run(rest));
 if (cmd === "review") process.exit(require("../lib/review.js").run(rest));
 if (cmd === "patterns") process.exit(require("../lib/patterns.js").run(rest));
+if (cmd === "tokens") process.exit(require("../lib/tokens.js").run(rest));
 if (GATES[cmd]) {
   maybeBootstrap(cmd);
   process.exit(runGate(cmd, rest));
