@@ -2251,43 +2251,71 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
       }
     );
     const head = gitOut(["rev-parse", "--short", "HEAD"], tokRepo).trim();
-    const sessionsDir = path.join(base, "tok-sessions");
-    const sdir = path.join(sessionsDir, tkmod.slugOf(tokRepo), "session-1");
-    fs.mkdirSync(sdir, { recursive: true });
-    const now = Date.now();
-    const lines =
-      [
-        JSON.stringify({ type: "session", time: now - 5000, data: {} }),
-        JSON.stringify({
-          type: "assistant/message",
-          time: now - 1000,
-          data: {
-            usage: { inputTokens: 1000, outputTokens: 100, cacheReadTokens: 500, cacheWriteTokens: 0, totalTokens: 1600 },
-            message: { model: "deepseek-flash" },
-          },
-        }),
-        // 撕裂的末行，不该让整次统计崩掉
-        '{"type":"assistant/message","time":',
-      ].join("\n") + "\n";
-    fs.writeFileSync(path.join(sdir, "session.v4.jsonl.zstd"), zlib.zstdCompressSync(Buffer.from(lines, "utf8")));
-    const saved = { sessions: process.env.SIGNOFF_SESSIONS, cache: process.env.SIGNOFF_CACHE_DIR };
-    process.env.SIGNOFF_SESSIONS = sessionsDir;
-    process.env.SIGNOFF_CACHE_DIR = path.join(base, "tok-cache");
-    let got = null;
-    try {
-      got = tkmod.foldFor(tokRepo, { refresh: true });
-    } finally {
-      if (saved.sessions === undefined) delete process.env.SIGNOFF_SESSIONS;
-      else process.env.SIGNOFF_SESSIONS = saved.sessions;
-      if (saved.cache === undefined) delete process.env.SIGNOFF_CACHE_DIR;
-      else process.env.SIGNOFF_CACHE_DIR = saved.cache;
+    // Node 18/20 没有 zstd（22.15 才加进来）。产品代码在这种情况下明说原因、不给 0；
+    // 这段夹具本身要用 zstd 压文件，所以老 Node 上改成断言那句话，并打印跳过原因。
+    // CI 的 node 20 矩阵就卡在这里崩过一次：整套用例不该因为一个夹具而整片红。
+    if (typeof zlib.zstdCompressSync !== "function" || typeof zlib.zstdDecompressSync !== "function") {
+      // 夹具要压 zstd，老 Node 压不了；那就改问产品自己那句话：说清原因、不给 0。
+      // 实测口径：`tokens` 在这种情况下退出 2，并把「needs Node >= 22.15」写在 stderr。
+      const nzSessions = path.join(base, "tok-sessions-nozstd");
+      const nzDir = path.join(nzSessions, tkmod.slugOf(tokRepo), "session-1");
+      fs.mkdirSync(nzDir, { recursive: true });
+      fs.writeFileSync(path.join(nzDir, "session.v4.jsonl.zstd"), "not really zstd", "utf8");
+      const nzSaved = { sessions: process.env.SIGNOFF_SESSIONS, cache: process.env.SIGNOFF_CACHE_DIR };
+      process.env.SIGNOFF_SESSIONS = nzSessions;
+      process.env.SIGNOFF_CACHE_DIR = path.join(base, "tok-cache-nozstd");
+      let nzr = null;
+      try {
+        nzr = run(["tokens", "--json"], tokRepo);
+      } finally {
+        if (nzSaved.sessions === undefined) delete process.env.SIGNOFF_SESSIONS;
+        else process.env.SIGNOFF_SESSIONS = nzSaved.sessions;
+        if (nzSaved.cache === undefined) delete process.env.SIGNOFF_CACHE_DIR;
+        else process.env.SIGNOFF_CACHE_DIR = nzSaved.cache;
+      }
+      const nzSaid = ((nzr && nzr.stderr) || "") + ((nzr && nzr.stdout) || "");
+      check("tokens: a Node without zstd says why instead of counting", (nzr && nzr.status) === 2 && /zstd/.test(nzSaid), true, nzSaid.trim().split("\n")[0]);
+      check("tokens: the message names the required version", /needs Node >= 22\.15/.test(nzSaid), true);
+      console.log("SKIP tokens: zstd fixture — this Node (" + process.version + ") has no zstdCompressSync");
+    } else {
+      const sessionsDir = path.join(base, "tok-sessions");
+      const sdir = path.join(sessionsDir, tkmod.slugOf(tokRepo), "session-1");
+      fs.mkdirSync(sdir, { recursive: true });
+      const now = Date.now();
+      const lines =
+        [
+          JSON.stringify({ type: "session", time: now - 5000, data: {} }),
+          JSON.stringify({
+            type: "assistant/message",
+            time: now - 1000,
+            data: {
+              usage: { inputTokens: 1000, outputTokens: 100, cacheReadTokens: 500, cacheWriteTokens: 0, totalTokens: 1600 },
+              message: { model: "deepseek-flash" },
+            },
+          }),
+          // 撕裂的末行，不该让整次统计崩掉
+          '{"type":"assistant/message","time":',
+        ].join("\n") + "\n";
+      fs.writeFileSync(path.join(sdir, "session.v4.jsonl.zstd"), zlib.zstdCompressSync(Buffer.from(lines, "utf8")));
+      const saved = { sessions: process.env.SIGNOFF_SESSIONS, cache: process.env.SIGNOFF_CACHE_DIR };
+      process.env.SIGNOFF_SESSIONS = sessionsDir;
+      process.env.SIGNOFF_CACHE_DIR = path.join(base, "tok-cache");
+      let got = null;
+      try {
+        got = tkmod.foldFor(tokRepo, { refresh: true });
+      } finally {
+        if (saved.sessions === undefined) delete process.env.SIGNOFF_SESSIONS;
+        else process.env.SIGNOFF_SESSIONS = saved.sessions;
+        if (saved.cache === undefined) delete process.env.SIGNOFF_CACHE_DIR;
+        else process.env.SIGNOFF_CACHE_DIR = saved.cache;
+      }
+      check("tokens: a session file is read back through zstd", got.available, true);
+      check("tokens: the fixture session yields exactly one call", got.totals.calls, 1);
+      check("tokens: the fixture call has 1600 tokens", got.totals.tokens, 1600);
+      check("tokens: the fixture call is attributed to the commit after it", (got.byCommit.get(head) || {}).tokens, 1600);
+      check("tokens: the cache is written outside the repo", fs.existsSync(path.join(base, "tok-cache")), true);
+      check("tokens: nothing is written into the repo", fs.existsSync(path.join(tokRepo, ".signoff", "tokens.json")), false);
     }
-    check("tokens: a session file is read back through zstd", got.available, true);
-    check("tokens: the fixture session yields exactly one call", got.totals.calls, 1);
-    check("tokens: the fixture call has 1600 tokens", got.totals.tokens, 1600);
-    check("tokens: the fixture call is attributed to the commit after it", (got.byCommit.get(head) || {}).tokens, 1600);
-    check("tokens: the cache is written outside the repo", fs.existsSync(path.join(base, "tok-cache")), true);
-    check("tokens: nothing is written into the repo", fs.existsSync(path.join(tokRepo, ".signoff", "tokens.json")), false);
 
     // 只读契约：report 不因为多了一块 token 就往仓库里写东西
     const noTok = JSON.parse(run(["report", "--json", "--no-tokens"], tokRepo).stdout);
