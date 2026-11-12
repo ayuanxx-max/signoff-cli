@@ -1,0 +1,18 @@
+flowchart TD
+    subgraph PRE["前置（一次性，任何工作区都适用）"]
+        direction LR
+        P1["hb.py up<br/>常驻 Brave · CDP 9222"]
+        P2["sync-global.ps1 -Check<br/>29 files identical"]
+    end
+    A["需求：要一张图"] --> B{"画关系/流程，<br/>还是截现有页面？"}
+    PRE --> B
+    B -- "画：框架图/流程图/脑图" --> C["写源文件<br/>docs/diagrams/src/name.mmd"]
+    C --> D["diagram.py render<br/>--size 2200 --theme neutral"]
+    D --> E["docs/diagrams/name.png"]
+    B -- "截：看板/报告/网页" --> F["拿 URL，或先 report --html 渲染出本地文件"]
+    F --> G["shot.py page --out x.png<br/>--clip '#id' / --full / --scroll h2"]
+    G --> H["x.png"]
+    E --> I["源文件与产物一起提交<br/>答复里引用 png"]
+    H --> I
+    D -. "失败" .-> J["diagram.py doctor<br/>直接报缺 mmdc 还是缺 Brave"]
+    G -. "失败" .-> K["退出码 2 + 单行 JSON 原因"]
