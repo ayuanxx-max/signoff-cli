@@ -1759,6 +1759,15 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     const fixPat = toolPats.find((x) => x.key === "tool:fix");
     check("patterns: the tool hint does not claim a gate failed", /same gate failed/.test(fixPat ? fixPat.hint : ""), false);
 
+    // 看板一句话里的三个数字必须同属一个窗口：19 提交 / 17 过闸 配 100% 是自相矛盾的
+    const repmod = require(path.join(ROOT, "lib", "report.js"));
+    const winCounts = repmod.taskCounts({ count: 19, passed: 17, since: 17, guarded: 17, rate: 100 });
+    check("report: a windowed task counts the window", winCounts.count, 17);
+    check("report: a windowed task keeps the all-time total", winCounts.total, 19);
+    const allCounts = repmod.taskCounts({ count: 19, passed: 17, since: 19, guarded: 17, rate: 89 });
+    check("report: an unwindowed task counts every commit", allCounts.count, 19);
+    check("report: an unwindowed task shows a single window", allCounts.windowed, false);
+
     // 回滚必须带走补丁自己新建、但被 .gitignore 挡住的文件；用户原有的被忽略文件不许动
     const igBase = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-ignored-"));
     const igRepo = path.join(igBase, "repo");
