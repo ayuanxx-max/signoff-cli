@@ -17,6 +17,12 @@ jobs:
       # itself, installs nothing and leaves `signoff` off PATH (exit 127, no gate ran).
       - run: npm i -g --silent signoff-cli@4.7.1
       - run: signoff guard --ci
+      # p1 keeps the captured output out of the log on purpose (it can be long), which
+      # leaves a red gate with no reason. On CI there is no local file to open, so print
+      # the tail here — it is the difference between "red" and "red because X".
+      - name: gate log tail
+        if: always()
+        run: tail -n 40 .signoff/hook.log 2>/dev/null || echo "no gate log this run"
       - name: audit trailers
         env:
           GITHUB_EVENT_BEFORE: ${{ github.event.before }}
