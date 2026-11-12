@@ -1619,7 +1619,14 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     const codeLines = (txt) => txt.split("\n").filter((l) => l.trim() && !l.trim().startsWith("#")).join("\n");
     check("ci: the template installs the cli", /npm i -g --silent signoff-cli@/.test(guardMod.CI_BODY), true);
     check("ci: the template runs no npx command", /npx/.test(codeLines(guardMod.CI_BODY)), false);
-    const ownWf = fs.readFileSync(path.join(ROOT, ".github", "workflows", "signoff.yml"), "utf8");
+    // the committed blob, not the worktree: an older installed cli rewrites the file on
+    // a fresh clone (that is the bug this asserts against), so the worktree proves nothing
+    let ownWf = "";
+    try {
+      ownWf = require("child_process").execFileSync("git", ["show", "HEAD:.github/workflows/signoff.yml"], { cwd: ROOT, encoding: "utf8" });
+    } catch (e) {
+      ownWf = "";
+    }
     check("ci: this repo's own workflow runs no npx command", /npx/.test(codeLines(ownWf)), false);
 
     // 评审存证：hash 才是主张，签名是自述

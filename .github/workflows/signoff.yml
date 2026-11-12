@@ -17,6 +17,9 @@ jobs:
       # itself, installs nothing and leaves `signoff` off PATH (exit 127, no gate ran).
       - run: npm i -g --silent signoff-cli@4.7.1
       - run: signoff guard --ci
+      # The installed cli bootstraps a fresh clone (empty .git/hooks) and, before 4.8,
+      # rewrote this file with its stock template. This repo's version is the truth.
+      - run: git checkout -- .github/workflows/signoff.yml
       # p1 reports a red suite as "rc=1" and keeps the detail to itself, which leaves a
       # red gate with no reason on CI (there is no local hook.log to open). Re-run the
       # same suite here so the failing case is named in the log.
