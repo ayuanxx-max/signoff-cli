@@ -1742,6 +1742,63 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     check("uninstall: --all drops the waivers", fs.existsSync(allowFile), false);
     check("uninstall: --all says what it removed", /waiver/.test(String(un.stdout)), true);
 
+    // runs.log 里也有 fix/dispute/review 的结论：回滚不是"门失败"，复盘不该被引偏
+    const patmod = require(path.join(ROOT, "lib", "patterns.js"));
+    const toolPats = patmod.extract(
+      [
+        { gate: "fix", ok: false, ts: "2026-01-01T00:00:00Z" },
+        { gate: "fix", ok: false, ts: "2026-01-02T00:00:00Z" },
+        { gate: "p1", ok: false, ts: "2026-01-03T00:00:00Z" },
+      ],
+      [],
+      { min: 2 }
+    );
+    const patKeys = toolPats.map((x) => x.key);
+    check("patterns: a rolled-back fix is a tool outcome", patKeys.includes("tool:fix"), true);
+    check("patterns: a real gate failure stays a gate", patKeys.includes("gate:p1"), true);
+    const fixPat = toolPats.find((x) => x.key === "tool:fix");
+    check("patterns: the tool hint does not claim a gate failed", /same gate failed/.test(fixPat ? fixPat.hint : ""), false);
+
+    // 回滚必须带走补丁自己新建、但被 .gitignore 挡住的文件；用户原有的被忽略文件不许动
+    const igBase = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-ignored-"));
+    const igRepo = path.join(igBase, "repo");
+    fs.mkdirSync(path.join(igRepo, "dist"), { recursive: true });
+    fs.mkdirSync(path.join(igRepo, "src"), { recursive: true });
+    git(["init", "-q"], igRepo);
+    git(["config", "user.email", "t@example.com"], igRepo);
+    git(["config", "user.name", "t"], igRepo);
+    fs.writeFileSync(path.join(igRepo, ".gitignore"), "dist/\n", "utf8");
+    fs.writeFileSync(path.join(igRepo, "src/app.js"), "module.exports = 1;\n", "utf8");
+    fs.writeFileSync(path.join(igRepo, "dist/keep.txt"), "keep\n", "utf8");
+    fs.writeFileSync(path.join(igRepo, "fail.js"), "process.exit(1);\n", "utf8");
+    git(["add", "-A"], igRepo);
+    git(["commit", "-qm", "base"], igRepo);
+    const igPatch = [
+      "diff --git a/src/app.js b/src/app.js",
+      "--- a/src/app.js",
+      "+++ b/src/app.js",
+      "@@ -1 +1 @@",
+      "-module.exports = 1;",
+      "+module.exports = 2;",
+      "diff --git a/dist/new.txt b/dist/new.txt",
+      "new file mode 100644",
+      "--- /dev/null",
+      "+++ b/dist/new.txt",
+      "@@ -0,0 +1 @@",
+      "+new",
+      "",
+    ].join("\n");
+    fs.writeFileSync(path.join(igRepo, "fix.patch"), igPatch, "utf8");
+    const igRun = run(["fix", "--patch", "fix.patch", "--run", "node fail.js", "--scope", "src", "--scope", "dist"], igRepo, p0env);
+    check("fix: a still-red patch is rolled back", igRun.status, 1);
+    check("fix: rollback removes the ignored file the patch created", fs.existsSync(path.join(igRepo, "dist", "new.txt")), false);
+    check("fix: rollback keeps the ignored file that was already there", fs.existsSync(path.join(igRepo, "dist", "keep.txt")), true);
+    check(
+      "fix: rollback restores the patched file",
+      fs.readFileSync(path.join(igRepo, "src", "app.js"), "utf8").replace(/\r\n/g, "\n"),
+      "module.exports = 1;\n"
+    );
+
     // 评审存证：hash 才是主张，签名是自述
     const rev = require(path.join(ROOT, "lib", "review.js"));
     check("review: diffInfo hashes the staged diff", typeof rev.diffInfo, "function");

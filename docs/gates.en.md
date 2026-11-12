@@ -145,7 +145,10 @@ missed one rolls the whole thing back:
 
 The tree must have no tracked modifications (HEAD is the rollback point); untracked files do not
 block it. Every decision is appended to `.signoff/fix-log.jsonl`: the patch, the files, both exit
-codes, the anti-tamper verdict, kept or rolled back, and why.
+codes, the anti-tamper verdict, kept or rolled back, and why. A rollback also removes files the
+patch itself created, including ones hidden by `.gitignore` that `git clean -fd` leaves alone — only
+files that did not exist before the patch, so a pre-existing untracked or ignored file is never touched;
+otherwise the leftovers become part of the next baseline.
 
 Exit codes: `0` kept, `1` rolled back, `2` refused (usage, dirty tree, already green, out of scope,
 verdict path).
@@ -212,3 +215,7 @@ From this repository (423 run records):
 ```
 
 `--md FILE` exports a Markdown table for a weekly review.
+
+Only gates are recorded as `gate:`. `fix`, `dispute` and `review` also write `runs.log`, but a
+non-pass from them (rolled back, refuted, rejected) is a correct outcome: those appear as `tool:fix`
+and friends, never as "the same gate failed again".

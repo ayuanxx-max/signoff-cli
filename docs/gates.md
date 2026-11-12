@@ -135,7 +135,9 @@
 
 补丁里的路径按 git 的引号与八进制转义还原（`"a/\346\265\213.test.js"` 这类），重命名两侧都算改动；
 `git apply` 因换行不一致失败时会按 `--ignore-whitespace` 重试一次，仍失败就直接说 CRLF/LF 不一致。
-工作区必须没有「被跟踪的改动」（回滚点是 HEAD）；未跟踪文件不挡路。判定结果写
+工作区必须没有「被跟踪的改动」（回滚点是 HEAD）；未跟踪文件不挡路。回滚会把补丁自己新建的
+文件一并删掉，包括被 `.gitignore` 挡住、`git clean -fd` 不碰的那些（只删打补丁前不存在的；
+用户原有的未跟踪/被忽略文件不动），否则留下的残留会被下一次 fix 当成基线的一部分。判定结果写
 `.signoff/fix-log.jsonl`：patch、文件、前后两次运行的退出码、反作弊结论、留下还是回滚、原因。
 
 退出码：`0` 留下，`1` 回滚，`2` 拒绝动手（用法、脏工作区、基线已绿、越界、判定路径）。
@@ -193,6 +195,9 @@ decision），把散落的失败按「同一个地方反复红」聚成模式，
 ```
 
 `--md FILE` 导出 Markdown 表，供周报或复盘引用。
+
+只有判定门以 `gate:` 记。`fix` / `dispute` / `review` 也写 `runs.log`，但它们返回「没通过」
+（回滚、被推翻、被拒）是正确结果，记作 `tool:fix` 这类条目，不会算成「同一个门反复红」。
 
 <!-- EN-BEGIN auto-embedded from docs/gates.en.md; edit that file and run node tools/sync-bilingual.mjs -->
 
@@ -345,7 +350,10 @@ missed one rolls the whole thing back:
 
 The tree must have no tracked modifications (HEAD is the rollback point); untracked files do not
 block it. Every decision is appended to `.signoff/fix-log.jsonl`: the patch, the files, both exit
-codes, the anti-tamper verdict, kept or rolled back, and why.
+codes, the anti-tamper verdict, kept or rolled back, and why. A rollback also removes files the
+patch itself created, including ones hidden by `.gitignore` that `git clean -fd` leaves alone — only
+files that did not exist before the patch, so a pre-existing untracked or ignored file is never touched;
+otherwise the leftovers become part of the next baseline.
 
 Exit codes: `0` kept, `1` rolled back, `2` refused (usage, dirty tree, already green, out of scope,
 verdict path).
@@ -412,5 +420,9 @@ From this repository (423 run records):
 ```
 
 `--md FILE` exports a Markdown table for a weekly review.
+
+Only gates are recorded as `gate:`. `fix`, `dispute` and `review` also write `runs.log`, but a
+non-pass from them (rolled back, refuted, rejected) is a correct outcome: those appear as `tool:fix`
+and friends, never as "the same gate failed again".
 
 <!-- EN-END -->

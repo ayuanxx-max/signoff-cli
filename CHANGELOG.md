@@ -1,5 +1,11 @@
 ## Unreleased
 
+- 修：`fix` 回滚会删掉补丁自己新建、但被 `.gitignore` 挡住的文件（`git clean -fd` 不碰它们，
+  留下就是半回滚，下一次 fix 会把残留当基线）；只删打补丁前不存在的路径，用户原有的未跟踪/
+  被忽略文件不动，空出来的父目录才收。
+- 修：`patterns` 不再把 `fix`/`dispute`/`review` 的「没通过」算成门失败——回滚、被推翻、被拒
+  都是正确结果，现在记作 `tool:<name>`，`gate:<name>` 只留给真正的判定门。
+
 - 修（P0，静默放行三处）：`integrity`、`review`、`fix` 原来都拿正则去啃 git 的人类可读输出，
   路径含中文/空格时被 `core.quotepath` 转义成八进制，匹配不上就被当成"没有改动"——删掉
   `tests/测试.test.js` 的断言仍判 clean，中文名 diff 被说成 `nothing to review`，`Lib/P1.js`
