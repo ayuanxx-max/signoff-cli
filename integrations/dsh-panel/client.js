@@ -129,6 +129,12 @@ const VERDICT = {
     // 一页放得下的行数：挡路项最多占 3 行，其余给组任务。超过一页才出现"打开完整页面"。
     const PAGE_ROWS = 9;
 
+    function money(x) {
+      const v = Number(x) || 0;
+      if (v <= 0) return "";
+      return v < 0.01 ? `$${v.toFixed(4)}` : `$${v.toFixed(2)}`;
+    }
+
     function TaskRow(props) {
       const t = props.task;
       return h(
@@ -141,7 +147,8 @@ const VERDICT = {
           { style: styles.meta },
           `${t.count} ${M.commits} · ${M.gated} ${t.passed}` +
             (t.rate != null ? ` · ${M.rate} ${t.rate}%` : "") +
-            (t.unmarked ? ` · ${M.unmarked} ${t.unmarked}` : ""),
+            (t.unmarked ? ` · ${M.unmarked} ${t.unmarked}` : "") +
+            (t.cost > 0 ? ` · ${money(t.cost)}` : ""),
         ),
       );
     }

@@ -1321,6 +1321,34 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     const panelSrc = fs.readFileSync(path.join(__dirname, "..", "integrations", "dsh-panel", "client.js"), "utf8");
     check("panel badge drops the permission wording", /不能发|可以发/.test(panelSrc), false);
     check("panel follows the browser language", /navigator\.language/.test(panelSrc) && /blocked: "failed"/.test(panelSrc), true);
+    // Token 与费用要落在用户指着的那一行：过闸率后面接金额，0 或读不到就不写。
+    const panelHost = fs.readFileSync(path.join(__dirname, "..", "integrations", "dsh-panel", "index.js"), "utf8");
+    check("panel carries per-task token cost", panelHost.includes("tokens: t.tokens") && panelHost.includes("cost: t.cost"), true);
+    check("panel appends the cost after the pass rate", panelSrc.includes("t.cost > 0") && panelSrc.includes("money(t.cost)"), true);
+    check("panel keeps sub-cent spend visible", panelSrc.includes("v < 0.01"), true);
+    {
+      // 服务端拼行：report.json 里的 tokens/cost 必须原样出现在 taskRows 里，行里才有金额可显示。
+      const { pathToFileURL } = require("url");
+      const panelUrl = pathToFileURL(path.join(__dirname, "..", "integrations", "dsh-panel", "index.js")).href;
+      const probe = path.join(base, "panel-probe.mjs");
+      const fixture = {
+        tasks: [
+          { id: "fix", label: "fix SignOff 项目更新 4.1.1 版", count: 9, passed: 9, rate: 100, tokens: 2068623, cost: 0.0191 },
+          { id: "plain", label: "没有账单的一组", count: 2, passed: 2, rate: 100 },
+        ],
+      };
+      fs.writeFileSync(
+        probe,
+        "import { card } from " + JSON.stringify(panelUrl) + ";\n" +
+          'const row = card("s", {}, ' + JSON.stringify(fixture) + ");\n" +
+          "console.log(JSON.stringify(row.taskRows));\n",
+        "utf8"
+      );
+      const rows = JSON.parse(spawnSync(process.execPath, [probe], { encoding: "utf8" }).stdout || "[]");
+      check("panel row carries the task cost", rows[0] && rows[0].cost, 0.0191);
+      check("panel row carries the task tokens", rows[0] && rows[0].tokens, 2068623);
+      check("panel row without usage stays zero", rows[1] && rows[1].cost, 0);
+    }
   }
       const anyRed = parsed.gates.some((g) => g.ran && g.ok === false);
       check("verdict follows the gates", parsed.verdict === "blocked", anyRed);

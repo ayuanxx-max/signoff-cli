@@ -22,7 +22,7 @@ async function readJson(file) {
 }
 
 // One repository card: only the fields the panel draws. The full page stays the artifact.
-function card(slug, entry, report) {
+export function card(slug, entry, report) {
   const data = report || {};
   const summary = data.summary || {};
   return {
@@ -50,6 +50,9 @@ function card(slug, entry, report) {
       rate: t.rate ?? null,
       risk: !!t.risk,
       unmarked: t.unmarked ?? 0,
+      // Token 与费用：report.json 里已经有了，面板只负责显示；读不到就是 0，显示时再判断。
+      tokens: t.tokens ?? 0,
+      cost: t.cost ?? 0,
     })),
     unmarkedTotal: summary.unmarkedTotal ?? null,
     since: data.range ? data.range.since : null,
@@ -61,7 +64,8 @@ function card(slug, entry, report) {
   };
 }
 
-async function state(config) {
+// 导出给自测：面板的行是服务端拼的，拼错了要在测试里红。
+export async function state(config) {
   const root = mountRoot(config);
   const index = await readJson(path.join(root, "index.json"));
   const repos = index && index.repos ? index.repos : {};
