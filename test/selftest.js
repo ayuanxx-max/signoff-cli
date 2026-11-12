@@ -1629,6 +1629,39 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     }
     check("ci: this repo's own workflow runs no npx command", /npx/.test(codeLines(ownWf)), false);
 
+    // 路径里有中文/空格时，闸门与存证都必须看见它：git 默认 quotepath 会把这类路径
+    // 转义成八进制，正则一啃人类可读输出，中文路径就成了"没被碰过"——删断言还能绿。
+    const p0base = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-paths-"));
+    const p0repo = path.join(p0base, "repo");
+    fs.mkdirSync(path.join(p0repo, "tests"), { recursive: true });
+    const p0env = { SIGNOFF_NO_MACHINE: "1", SIGNOFF_NO_BOOTSTRAP: "1" };
+    git(["init", "-q"], p0repo);
+    git(["config", "user.email", "t@example.com"], p0repo);
+    git(["config", "user.name", "t"], p0repo);
+    const cnTest = "tests/中文 用例.test.js";
+    const three = "assert.strictEqual(1, 1);\nassert.strictEqual(2, 2);\nassert.strictEqual(3, 3);\n";
+    fs.writeFileSync(path.join(p0repo, cnTest), three, "utf8");
+    fs.writeFileSync(path.join(p0repo, "run.js"), "process.exit(0);\n", "utf8");
+    git(["add", "-A"], p0repo);
+    git(["commit", "-qm", "base"], p0repo);
+    fs.writeFileSync(path.join(p0repo, "filler.txt"), "f\n", "utf8");
+    git(["add", "-A"], p0repo);
+    git(["commit", "-qm", "filler"], p0repo);
+    fs.writeFileSync(path.join(p0repo, cnTest), "assert.strictEqual(1, 1);\n", "utf8");
+    git(["add", "-A"], p0repo);
+
+    const cnStatus = require(path.join(ROOT, "lib", "integrity.js")).check({ cwd: p0repo });
+    check("integrity: a non-ASCII test path is still seen", cnStatus.touched.length, 1);
+    check("integrity: deleting assertions in a Chinese-named test file is a finding", cnStatus.ok, false);
+    const cnReview = require(path.join(ROOT, "lib", "review.js")).diffInfo(p0repo);
+    check("review: a Chinese-named diff lists its file", cnReview.files.length, 1);
+    check("review: that diff is not empty", cnReview.bytes > 0, true);
+    const cnFix = require(path.join(ROOT, "lib", "fix.js"));
+    check("fix: a case-flipped verdict path is refused", cnFix.denied(["Lib/P1.js"]).length, 1);
+    check("fix: the manifest is refused", cnFix.denied(["package.json"]).length, 1);
+    check("fix: another project's lib file is allowed", cnFix.denied(["lib/foo.js"]).length, 0);
+    check("fix: inside signoff-cli every lib module is refused", cnFix.denied(["lib/foo.js"], { self: true }).length, 1);
+
     // 评审存证：hash 才是主张，签名是自述
     const rev = require(path.join(ROOT, "lib", "review.js"));
     check("review: diffInfo hashes the staged diff", typeof rev.diffInfo, "function");
@@ -1746,7 +1779,9 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       "a.js"
     );
     check("fix: the verdict path is refused", fixlib.denied(["bin/signoff.js"]).length, 1);
-    check("fix: a normal file is allowed", fixlib.denied(["lib/report.js"]).length, 0);
+    check("fix: a normal source file is still allowed", fixlib.denied(["src/app.js"]).length, 0);
+    // report/release 也读判定结果：修它们等于改判据，所以从 4.8 起一并拒绝
+    check("fix: the reporter is part of the verdict path", fixlib.denied(["lib/report.js"]).length, 1);
     check("fix: out-of-scope files are named", fixlib.outOfScope(["lib/a.js", "docs/b.md"], ["lib"]).join(","), "docs/b.md");
 
     const makeFixFixture = (content) => {
