@@ -1,4 +1,6 @@
-## Unreleased
+## 4.8.0
+
+**闸门按代价分层，反向对照只问「会不会红」。**
 
 ### 钩子：提交跑快检，推送跑全套
 
@@ -78,6 +80,67 @@ pm 上的 latest 仍是 4.7.1。
 - **signoff review**：把评审绑到 diff 哈希，改一字节即失效；--verify 校验「审过的=要发的」。
   --by/--model 是自述，工具只保证绑定关系。
 - **signoff patterns**：读 runs.log 与账本，把「同一处反复红」聚成模式并排序；--md 导出。
+
+### English
+
+**Gates are layered by cost; the negative control only asks whether a test goes red.**
+
+- `signoff init` now installs hooks with separate jobs: `pre-commit` runs the p1 fast layer, `pre-push`
+  and CI run the full suite. The fast command comes from `.signoff/config.json` (`fast_cmd`) or
+  `package.json` (`test:fast`); with neither declared there is no fast layer and the hook falls back to
+  the full suite rather than waving the commit through.
+- The cache key in `.signoff/cache.json` now carries the run mode (`fast` / `full`), so a green fast run
+  can no longer stand in for the full run at push time.
+- This repo adds `node test/smoke.js` (`npm run test:fast`, 8 checks, ~2.4 s). Its assertions read the
+  rendered page chips, not source strings: the 2026-11-12 regression that downgraded an end-to-end
+  assertion to a source match lived on exactly that path.
+- New `signoff p1 --negative-control`: the test files touched by this change are run inside a base
+  version checked out with `git worktree`, and they **must go red**. Green on both trees is `green-on-base`;
+  a base checkout where they cannot even start is reported as `cannot-run-on-base` instead of pretending
+  the test proved anything. Push and CI enable it automatically, only when tests were touched, with
+  `--nc-budget` (180 s) and a timeout counted as red. It only asks "does this go red", so under
+  `SIGNOFF_NC=1` the suite stops at the first red: a 126.1 s push came back to the 65 s range.
+- `node test/selftest.js` accepts `SIGNOFF_TIMING=1`: it ranks the 12 slowest cases so tuning starts from data.
+- `npm test` now runs two shards in parallel (`test/run-all.js`): no case was dropped, the suite went from
+  93 s to the **50 s range**, and the push gate went from 126 s to **53 s** (including a 2.2 s negative
+  control). `node test/selftest.js` remains the full serial path.
+- UI: amounts always carry a label first (`费用 $0.02` in Chinese, `cost $0.02` in English); every amount on
+  the board renders as `class="cost"` with visible text of that shape. The board header is now 费用, and
+  Chinese section titles are no longer uppercased by `text-transform`.
+- New `docs/DESIGN.md` (spacing, type, status colours, wording) and `node tools/ui-shot.js`, which renders
+  the board to `docs/ui/board-{zh,en}.png` with the machine's resident browser.
+- New `jsconfig.json` + `npm run typecheck`; `typescript` / `@types/node` stay development-only, so runtime
+  dependencies remain zero.
+- The board gains a "Token and cost" block: cumulative tokens, money, per-day, per task group and per commit
+  agent spend; `signoff tokens` answers the same question in the terminal (`--json` / `--md`). The data is
+  read from this machine's DSH session records (`assistant/message.usage`, read-only, no network), priced
+  from DeepSeek's peak/off-peak rates, overridable in `.signoff/prices.json`. When the records are
+  unreadable the block says why instead of showing 0, and the gate itself spends no tokens: the copy always
+  says "agent spend that produced these commits". Contract clause C12 (contract version 2).
+- Board consistency fix: a task group showed all-time "N commits · M passed" next to a percentage computed
+  over the install window, so the numerator and denominator disagreed with the percentage in one sentence.
+  All three numbers now come from one window, and when the windows differ the line says so.
+- `fix` rollback no longer deletes files the patch created that `.gitignore` hides: only paths that did not
+  exist before the patch are removed, pre-existing untracked/ignored files are left alone, and only
+  directories that became empty are collected.
+- `patterns` no longer counts a rolled-back `fix`, a refuted `dispute` or a rejected `review` as a gate
+  failure: those are correct outcomes and are now recorded as `tool:<name>`.
+- P0 fixes in `integrity`, `review` and `fix`: parsing git's human-readable output made paths containing
+  Chinese characters or spaces (escaped as octal by `core.quotepath`) look like "nothing changed", so
+  deleting assertions from `tests/测试.test.js` stayed clean, a Chinese-named diff was "nothing to review"
+  and `Lib/P1.js` could shadow `lib/p1.js`. All three now use `git -z`, normalise case and separators
+  before matching the blacklist, and treat `dispute`/`review`/`patterns`/`detect`/`runslog`/`package.json`
+  and lockfiles as judgment paths; only this repository treats all of `lib/` that way.
+- `dispute` no longer counts a mistyped command as evidence (unresolvable command = not-run, exit 2, no
+  pass/fail record; it does not read stderr text, which is mojibake under cp936), and `--budget` now
+  enforces a timeout with SIGKILL.
+- `integrity` defaults its base to `HEAD`, judging only what this commit contains; merge-base/`HEAD~1`
+  made every later commit red after one legitimate assertion deletion.
+- `SIGNOFF_ENGINE=python` now also runs `integrity` for p1: the Python reference gate had no anti-cheat,
+  and swapping engines must not mean swapping judgment.
+- `uninstall` collects the new state (`reviews.jsonl`, `fix-log.jsonl`, `cache/`, `disputes/`); `--all`
+  also removes `integrity-allow.json` and reports how many exemptions went away, and every kept item is
+  named under `kept:`.
 
 ## 4.7.1
 
