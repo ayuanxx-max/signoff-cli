@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// 给看板截一张图：改完版面自己先看一眼，再提交。
-// 用本机常驻 Brave（~/.dsh/tools/hb.py），没有就只提示，不算失败。
+// 给看板出图：渲染 → 交给全局 shot.py 截图（跨工作区通用那一半在 ~/.dsh/tools/shot.py）。
+// 改完版面自己先看一眼，再提交。
 "use strict";
 
 const { spawnSync } = require("child_process");
@@ -11,15 +11,19 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const OUT = path.join(ROOT, "docs", "ui");
 const PY = process.env.SIGNOFF_PYTHON || path.join(os.homedir(), ".openviking", "venv", "Scripts", "python.exe");
-const HB = path.join(os.homedir(), ".dsh", "tools", "hb.py");
+const TOOLS = path.join(os.homedir(), ".dsh", "tools");
+const SHOT = path.join(TOOLS, "shot.py");
 
-function sh(cmd, args, opts) {
-  return spawnSync(cmd, args, { encoding: "utf8", maxBuffer: 32 * 1024 * 1024, ...(opts || {}) });
-}
+const sh = (cmd, args, opts) =>
+  spawnSync(cmd, args, { encoding: "utf8", maxBuffer: 32 * 1024 * 1024, ...(opts || {}) });
 
 function main() {
-  if (!fs.existsSync(PY) || !fs.existsSync(HB)) {
-    console.log("[ui-shot] skipped: 常驻浏览器工具不在位（~/.dsh/tools/hb.py 或 OpenViking 的 python）");
+  if (!fs.existsSync(PY)) {
+    console.log("[ui-shot] skipped: 找不到 OpenViking 的 python（$SIGNOFF_PYTHON 可覆盖）");
+    return 0;
+  }
+  if (!fs.existsSync(SHOT)) {
+    console.log(`[ui-shot] skipped: 全局截图工具不在位（${SHOT}）`);
     return 0;
   }
   fs.mkdirSync(OUT, { recursive: true });
@@ -35,14 +39,20 @@ function main() {
       continue;
     }
     const png = path.join(OUT, `board-${lang}.png`);
-    const url = new URL(`file:///${page.replace(/\\/g, "/")}`).href;
-    const shot = sh(PY, [HB, "shot", url, png], { cwd: ROOT });
-    if (shot.status !== 0 || !fs.existsSync(png)) {
-      console.error(`[ui-shot] ${lang}: 截图失败（${(shot.stderr || shot.stdout || "").trim().split("\n").slice(-2).join(" ")}）`);
+    const shot = sh(PY, [SHOT, page, "--out", png, "--width", "1280", "--height", "1000"], { cwd: ROOT });
+    const line = (shot.stdout || "").trim().split("\n").pop() || "";
+    let info = null;
+    try {
+      info = JSON.parse(line);
+    } catch (e) {
+      info = null;
+    }
+    if (!info || !info.ok) {
+      console.error(`[ui-shot] ${lang}: 截图失败（${line || (shot.stderr || "").trim().slice(0, 200)}）`);
       failed += 1;
       continue;
     }
-    console.log(`[ui-shot] ${lang}: ${path.relative(ROOT, png)} ${Math.round(fs.statSync(png).size / 1024)} KB`);
+    console.log(`[ui-shot] ${lang}: ${path.relative(ROOT, png)} ${Math.round(info.bytes / 1024)} KB · ${info.ms} ms`);
   }
   return failed ? 1 : 0;
 }

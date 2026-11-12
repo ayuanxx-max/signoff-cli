@@ -49,4 +49,9 @@ SignOff 的界面只有两处：单文件看板（`signoff report --html`）与 
 node tools/ui-shot.js            # 写 docs/ui/board-zh.png 与 board-en.png
 ```
 
-脚本用本机常驻 Brave（`~/.dsh/tools/hb.py`）截图；没装就跳过并提示，不阻碍提交。
+页面由本仓库渲染，截图交给全局 `~/.dsh/tools/shot.py`（常驻 Brave，跨工作区通用）；
+两者任一缺失就跳过并提示，不阻碍提交。想只截某一块：
+
+```bash
+python ~/.dsh/tools/shot.py .tmp.html --out block.png --clip "#cost"
+```
