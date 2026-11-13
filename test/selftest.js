@@ -1778,8 +1778,18 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     // by the runner's own ceiling. Three things have to be written down, or the next
     // release waits the same way: a wall-clock bound on the suite job, no second full
     // suite on tag pushes, and cancelling superseded runs on the same branch.
-    const wfCi = fs.readFileSync(path.join(ROOT, ".github", "workflows", "ci.yml"), "utf8");
-    const wfOwnWt = fs.readFileSync(path.join(ROOT, ".github", "workflows", "signoff.yml"), "utf8");
+    // Read the committed blobs, not the worktree: `signoff guard --ci` runs an installed cli
+    // that regenerates signoff.yml from its own template, so on CI the worktree copy is the
+    // old template and these assertions would fail on a file nobody edited.
+    const headBlob = (p) => {
+      try {
+        return require("child_process").execFileSync("git", ["show", "HEAD:" + p], { cwd: ROOT, encoding: "utf8" });
+      } catch (e) {
+        return "";
+      }
+    };
+    const wfCi = headBlob(".github/workflows/ci.yml");
+    const wfOwnWt = headBlob(".github/workflows/signoff.yml");
     check("ci: the suite job has a wall-clock bound", /timeout-minutes:\s*\d+/.test(wfCi), true);
     check(
       "ci: the self-check workflow does not run again on a tag push",
