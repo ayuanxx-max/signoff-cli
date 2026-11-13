@@ -1785,7 +1785,13 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
       try {
         return require("child_process").execFileSync("git", ["show", "HEAD:" + p], { cwd: ROOT, encoding: "utf8" });
       } catch (e) {
-        return "";
+        // 容器 job 里 git 会因为目录属主不同而拒绝读仓库；那时退回工作区那份，
+        // 与提交内容一致（那一步只跑用例，不会再生成 workflow）。
+        try {
+          return fs.readFileSync(path.join(ROOT, p), "utf8");
+        } catch (e2) {
+          return "";
+        }
       }
     };
     const wfCi = headBlob(".github/workflows/ci.yml");
