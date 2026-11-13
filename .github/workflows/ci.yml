@@ -17,10 +17,22 @@ jobs:
     name: ${{ matrix.os }} / node ${{ matrix.node }}
     strategy:
       fail-fast: false
+      # 全交叉 3x3 时，一次推送要开 9 个 runner；最慢那次 macOS/node 22 卡住 901 s，
+      # 把一次发版的尾巴拖成 15 分钟。兼容性真正要证明的是「三个 OS 都能跑」+「node
+      # 20/22/24 都能跑」，而不是九个交叉点都跑：ubuntu 三个版本，windows 留 20 与 22
+      # （zstd missing 这类差异正是在 node 20 上暴露的），macOS 留 22。
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        node: [20, 22, 24]
+        include:
+          - { os: ubuntu-latest, node: 20 }
+          - { os: ubuntu-latest, node: 22 }
+          - { os: ubuntu-latest, node: 24 }
+          - { os: windows-latest, node: 20 }
+          - { os: windows-latest, node: 22 }
+          - { os: macos-latest, node: 22 }
     runs-on: ${{ matrix.os }}
+    # 没有上限时，一个卡住的 runner 只能等默认值。8 分钟比全套用例（约 50 s）宽 10 倍，
+    # 卡住就红，不再把发版尾巴拖到 15 分钟。
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4

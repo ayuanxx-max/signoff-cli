@@ -29,6 +29,11 @@ git add -A && git commit # 钩子会跑 p1（test:fast）+ secrets
 **发布口令（2026-11-11）：只有用户说出「发布 x.x.x」（带明确版本号）才走下面这条流程；其余说法一律只提交。**
 「暂不发布、只进本地仓库」= 只 commit 到本地 master，origin 落后是正常的，不 push、不 tag、不发 npm。
 
-发布流程：`npm test` → `signoff p5` → `signoff release --pre` → `npm publish` → 打 tag 推送 →
-`signoff release --post`。版本号、`package.json`、`server.json`、`CHANGELOG.md`、`git tag` 必须一致；
+发布流程：`npm test` → `signoff p5` → `signoff release --pre` → bump + commit + `git push` master →
+打 tag 推 tag（`publish.yml` 在 tag 上构建并带 provenance 发 npm，本地不裸发）→ `signoff release --post`。
+版本号、`package.json`、`server.json`、`CHANGELOG.md`、`git tag` 必须一致；
 `signoff report` 的「发布」项会现算这几件事，不一致就是红。
+
+发完不要手动轮询：`node tools/watch-release.js` 一条命令等到 npm / MCP 注册表 / tag / GitHub Release
+四条腿全到位（每个渠道看事实，默认 10 分钟上限，`--once` 只问一次）。实测四条渠道 1.3 s 内可判完，
+而 4.8.0 那次发布真正耗掉的时间几乎全是「起 shell、sleep、再问一遍」的重复轮询。

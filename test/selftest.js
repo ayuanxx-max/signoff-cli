@@ -1774,6 +1774,20 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     }
     check("ci: this repo's own workflow runs no npx command", /npx/.test(codeLines(ownWf)), false);
 
+    // A 4.8.0 release spent 15 minutes on one job that hung on macOS and was only killed
+    // by the runner's own ceiling. Three things have to be written down, or the next
+    // release waits the same way: a wall-clock bound on the suite job, no second full
+    // suite on tag pushes, and cancelling superseded runs on the same branch.
+    const wfCi = fs.readFileSync(path.join(ROOT, ".github", "workflows", "ci.yml"), "utf8");
+    const wfOwnWt = fs.readFileSync(path.join(ROOT, ".github", "workflows", "signoff.yml"), "utf8");
+    check("ci: the suite job has a wall-clock bound", /timeout-minutes:\s*\d+/.test(wfCi), true);
+    check(
+      "ci: the self-check workflow does not run again on a tag push",
+      /branches:\s*\[master\]/.test(wfOwnWt) && !/^on: \[push, pull_request\]/m.test(wfOwnWt),
+      true
+    );
+    check("ci: the self-check workflow cancels superseded runs", /concurrency:[\s\S]{0,120}cancel-in-progress:\s*true/.test(wfOwnWt), true);
+
     // 路径里有中文/空格时，闸门与存证都必须看见它：git 默认 quotepath 会把这类路径
     // 转义成八进制，正则一啃人类可读输出，中文路径就成了"没被碰过"——删断言还能绿。
     const p0base = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-paths-"));
