@@ -119,6 +119,18 @@
 | 存在账本（仓库内或 `~/.signoff/audit.log`） | p4 `verify` |
 | 暂存内容里有疑似密钥 | sec |
 
+**没进链条的关会在同一份输出里打印 `skip` 和原因**，例如：
+
+```text
+  p1   skip no test command detected — declare test_cmd in .signoff/config.json
+  p2   skip no verify/scenarios/ and no apps config — nothing to judge
+  cov  skip coverage.min not configured — this repo does not produce a coverage file
+```
+
+理由是：安静地少跑一关，和跑过一关在屏幕上长得一样，而使用者正是靠这块屏幕判断「我验过了」。
+缺席必须留痕。同理 `signoff p2` 在没有 app 时输出 `[p2] SKIPPED no apps`（退出码仍是 0，JSON 里 `"skipped": "no apps"`），
+不再把「什么都没测」写成 `PASS`。
+
 `.signoff/cache.json` 以 `git write-tree` 的结果加运行模式（`fast` / `full`）为键：同一份暂存内容重复提交只判一次，
 且**快检的通过不能替推送那一次的全套作保**。
 `SIGNOFF_SKIP=1` 跳过并写 `.signoff/skips.log`；`git commit --no-verify` 不写任何记录——所以 **CI 是唯一不可绕过的边界**。
@@ -330,6 +342,18 @@ After `signoff init`, `pre-commit` / `pre-push` / CI all call `signoff guard`:
 | `verify/scenarios/` exists | p2 `--strict` |
 | a ledger exists (in-repo or `~/.signoff/audit.log`) | p4 `verify` |
 | something in the staged set looks like a credential | sec |
+
+**A gate that does not join the chain prints `skip` and the reason in the same output**, for example:
+
+```text
+  p1   skip no test command detected — declare test_cmd in .signoff/config.json
+  p2   skip no verify/scenarios/ and no apps config — nothing to judge
+  cov  skip coverage.min not configured — this repo does not produce a coverage file
+```
+
+Silently dropping a gate looks exactly like passing it on screen, and that screen is how a user decides "I verified
+this". Absence has to leave a trace. For the same reason `signoff p2` with no apps prints `[p2] SKIPPED no apps`
+(exit code stays 0, JSON carries `"skipped": "no apps"`) instead of calling "nothing was measured" a `PASS`.
 
 `.signoff/cache.json` is keyed by the result of `git write-tree`, so the same staged content is judged once — that is why
 the second run is the millisecond-level "last gate run" you see on the board.

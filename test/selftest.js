@@ -621,6 +621,42 @@ function main() {
     r = g(["hook", "pre-push"]);
     check("pre-push: a changed diff invalidates the approval", r.status, 1, r.stdout.trim().split("\n").slice(-2).join(" | "));
     fs.writeFileSync(cfgPath, cfgBackup, "utf8");
+
+    // 「没东西可判」必须自己说出来：静默少跑一关，和跑过一关在屏幕上长得一样，
+    // 而使用者正是靠屏幕判断「我验过了」。
+    const cfgNoTest = JSON.parse(cfgBackup);
+    delete cfgNoTest.test_cmd;
+    fs.writeFileSync(cfgPath, JSON.stringify(cfgNoTest, null, 2) + "\n", "utf8");
+    fs.rmSync(path.join(repo, ".signoff", "cache.json"), { force: true });
+    const rskip = g(["hook", "pre-commit"]);
+    check(
+      "guard: p1 with no test command says skip and how to fix it",
+      /p1\s+skip .*test_cmd/.test(rskip.stdout) ? 1 : 0,
+      1,
+      rskip.stdout.trim().split("\n").slice(0, 4).join(" | ")
+    );
+    fs.writeFileSync(cfgPath, cfgBackup, "utf8");
+    // p2 只在有 verify/scenarios/ 时才进链条：把目录挪开，它必须说一声，而不是消失。
+    const scen = path.join(repo, "verify", "scenarios");
+    const hadScen = fs.existsSync(scen);
+    if (hadScen) fs.renameSync(scen, scen + ".p2test");
+    fs.rmSync(path.join(repo, ".signoff", "cache.json"), { force: true });
+    const rskip2 = g(["hook", "pre-commit"]);
+    check("guard: p2 with no scenarios says skip", /p2\s+skip /.test(rskip2.stdout) ? 1 : 0, 1, rskip2.stdout.trim().split("\n").slice(0, 4).join(" | "));
+    if (hadScen) fs.renameSync(scen + ".p2test", scen);
+
+    const srepo = path.join(os.tmpdir(), `signoff-skip-${process.pid}-${Date.now()}`);
+    fs.mkdirSync(srepo, { recursive: true });
+    git(["init", "-q"], srepo);
+    const p2e = run(["p2", "--json"], srepo);
+    let p2ej = null;
+    try {
+      p2ej = JSON.parse(p2e.stdout);
+    } catch (e) {
+      p2ej = null;
+    }
+    check("p2: zero apps reports skipped instead of a bare pass", p2ej && p2ej.skipped === "no apps" ? 1 : 0, 1, p2e.stdout.trim());
+    check("p2: the human line says SKIPPED, not PASS", /\[p2\] SKIPPED no apps/.test(run(["p2"], srepo).stdout) ? 1 : 0, 1);
     r = g(["hook", "pre-commit"]);
     check("guard hook pass", r.status, 0);
     const markerAfterPass = JSON.parse(fs.readFileSync(path.join(repo, ".signoff", "passed"), "utf8"));
