@@ -128,7 +128,14 @@ Full table: [docs/COMPARISON.en.md](docs/COMPARISON.en.md).
   **If you buy by adoption, you should not pick it today.**
 - **No third-party audit.** The ledger is self-signed on this machine: it shows nobody quietly edited it, not that the
   person running it is trustworthy.
-- **It is not code review.** It stops "unverified, declared done", not "ugly but working code".
+- **It does not grade code.** It stops "unverified, declared done", not "ugly but working code".
+- **Review is attestation, not a score.** `signoff review --by ID` binds "who looked at which diff" to that
+  diff's hash, and `signoff review --verify` exits 1 when the hash no longer matches (usable from scripts and
+  CI). Which reviewer — a local model, a human, any hosted one — is your call; the tool neither picks one nor
+  pretends to verify that the review was any good. A reproducible local-model recipe:
+  [docs/review-with-local-model.en.md](docs/review-with-local-model.en.md).
+- **No review check before push by default.** Only `"review_on_push": true` in `.signoff/config.json` makes
+  pre-push run `--verify`; when it is off, the tool does not pretend the step happened.
 
 Trust model and what it does not prove: [docs/trust.en.md](docs/trust.en.md).
 
@@ -142,6 +149,7 @@ Trust model and what it does not prove: [docs/trust.en.md](docs/trust.en.md).
 | --- | --- |
 | [docs/gates.en.md](docs/gates.en.md) | judgement rules and fixes for the seven gates (single authority) |
 | [docs/integrations.en.md](docs/integrations.en.md) | hooks / CI / MCP / editor wiring |
+| [docs/review-with-local-model.en.md](docs/review-with-local-model.en.md) | reviewing with a local model, and pinning it as an attestation (optional push gate) |
 | [docs/trust.en.md](docs/trust.en.md) | evidence chain, tamper answers, threat model |
 | [docs/COMPARISON.en.md](docs/COMPARISON.en.md) | anonymous comparison (with the quadrant image) |
 | [docs/SURFACES.en.md](docs/SURFACES.en.md) | platform shells at a glance |

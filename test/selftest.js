@@ -599,6 +599,28 @@ function main() {
     r = g(["hook", "pre-push"]);
     check("guard pre-push pass", r.status, 0);
     check("pre-push leaves no marker", fs.existsSync(path.join(repo, ".signoff", "passed")) ? 0 : 1, 1);
+
+    // 审代码这一步是可选的：默认不打开（否则仓库里一份旧存证会让之后每次推送都变红），
+    // 打开后必须真的判：没存证说明原因跳过，哈希对不上就红。
+    const cfgPath = path.join(repo, ".signoff", "config.json");
+    const cfgBackup = fs.readFileSync(cfgPath, "utf8");
+    fs.writeFileSync(cfgPath, JSON.stringify(Object.assign(JSON.parse(cfgBackup), { review_on_push: true }), null, 2) + "\n", "utf8");
+    r = g(["hook", "pre-push"]);
+    check(
+      "pre-push: opted in with no attestation skips and says why",
+      r.status === 0 && /no review attestation/.test(r.stdout) ? 1 : 0,
+      1,
+      r.stdout.trim().split("\n").slice(-2).join(" | ")
+    );
+    r = g(["review", "--by", "local-coder", "--model", "ollama-local/qwen2.5-coder:7b"]);
+    check("review: an approve can be recorded", r.status, 0, r.stdout.trim());
+    r = g(["hook", "pre-push"]);
+    check("pre-push: an approve for this diff passes", r.status, 0, r.stdout.trim().split("\n").slice(-1)[0]);
+    fs.writeFileSync(path.join(repo, "docs", "clean.md"), "# clean\n\n41 cases in 3.6 s, 12/12 PASS.\nthird\n", "utf8");
+    git(["add", "-A"], repo);
+    r = g(["hook", "pre-push"]);
+    check("pre-push: a changed diff invalidates the approval", r.status, 1, r.stdout.trim().split("\n").slice(-2).join(" | "));
+    fs.writeFileSync(cfgPath, cfgBackup, "utf8");
     r = g(["hook", "pre-commit"]);
     check("guard hook pass", r.status, 0);
     const markerAfterPass = JSON.parse(fs.readFileSync(path.join(repo, ".signoff", "passed"), "utf8"));

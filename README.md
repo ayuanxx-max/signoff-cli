@@ -119,7 +119,13 @@ signoff report --html   # 一页只读看板（默认写 .signoff/report.html）
 - **它不替你做判断**：七关全过只说明「这七件事有人做过、有记录」，不说明产品对。
 - **规模差得远**：同行在千万级/周的采用量，本工具是数千/周。**如果按采用量选型，今天就不该选它。**
 - **没有第三方审计**：账本是本机自签的，能证明「没被人悄悄改过」，不能证明「跑的人可信」。
-- **不做代码审查**：它挡的是「没验证就说完成」，不是「这段代码写得糙」。
+- **不评代码好坏**：它挡的是「没验证就说完成」，不是「这段代码写得糙」。评审质量不在它的判定范围里。
+- **审代码是存证，不是评分**：`signoff review --by ID` 把「谁看过哪份 diff」绑到该 diff 的哈希上，
+  `signoff review --verify` 在哈希对不上时退 1（脚本与 CI 可直接用）。谁来审——本机模型、人工、任意云端——
+  由你定，它不替你选，也不假装验证了「审得对不对」。接本机模型的可复算步骤见
+  [docs/review-with-local-model.md](docs/review-with-local-model.md)。
+- **推送前默认不查评审**：`.signoff/config.json` 里写 `"review_on_push": true` 才会在 pre-push 时跑
+  `--verify`；没打开时它不会假装检查过这一步。
 
 信任模型与它不证明什么：[docs/trust.md](docs/trust.md)（English: [docs/trust.en.md](docs/trust.en.md)）。
 
@@ -133,6 +139,7 @@ signoff report --html   # 一页只读看板（默认写 .signoff/report.html）
 | --- | --- |
 | [docs/gates.md](docs/gates.md) | 七道关的判定与修法（唯一权威） |
 | [docs/integrations.md](docs/integrations.md) | 钩子 / CI / MCP / 编辑器接法 |
+| [docs/review-with-local-model.md](docs/review-with-local-model.md) | 用本机模型审代码，并把这一步钉成存证（可选推送门） |
 | [docs/trust.md](docs/trust.md) | 证据链、篡改答复、威胁模型 |
 | [docs/COMPARISON.md](docs/COMPARISON.md) | 匿名对照（含象限图） |
 | [docs/SURFACES.md](docs/SURFACES.md) | 平台薄壳一览 |
@@ -297,7 +304,14 @@ Full table: [docs/COMPARISON.en.md](docs/COMPARISON.en.md).
   **If you buy by adoption, you should not pick it today.**
 - **No third-party audit.** The ledger is self-signed on this machine: it shows nobody quietly edited it, not that the
   person running it is trustworthy.
-- **It is not code review.** It stops "unverified, declared done", not "ugly but working code".
+- **It does not grade code.** It stops "unverified, declared done", not "ugly but working code".
+- **Review is attestation, not a score.** `signoff review --by ID` binds "who looked at which diff" to that
+  diff's hash, and `signoff review --verify` exits 1 when the hash no longer matches (usable from scripts and
+  CI). Which reviewer — a local model, a human, any hosted one — is your call; the tool neither picks one nor
+  pretends to verify that the review was any good. A reproducible local-model recipe:
+  [docs/review-with-local-model.en.md](docs/review-with-local-model.en.md).
+- **No review check before push by default.** Only `"review_on_push": true` in `.signoff/config.json` makes
+  pre-push run `--verify`; when it is off, the tool does not pretend the step happened.
 
 Trust model and what it does not prove: [docs/trust.en.md](docs/trust.en.md).
 
@@ -311,6 +325,7 @@ Trust model and what it does not prove: [docs/trust.en.md](docs/trust.en.md).
 | --- | --- |
 | [docs/gates.en.md](docs/gates.en.md) | judgement rules and fixes for the seven gates (single authority) |
 | [docs/integrations.en.md](docs/integrations.en.md) | hooks / CI / MCP / editor wiring |
+| [docs/review-with-local-model.en.md](docs/review-with-local-model.en.md) | reviewing with a local model, and pinning it as an attestation (optional push gate) |
 | [docs/trust.en.md](docs/trust.en.md) | evidence chain, tamper answers, threat model |
 | [docs/COMPARISON.en.md](docs/COMPARISON.en.md) | anonymous comparison (with the quadrant image) |
 | [docs/SURFACES.en.md](docs/SURFACES.en.md) | platform shells at a glance |

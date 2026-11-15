@@ -188,6 +188,10 @@ sha256 短哈希与评审一起写进仓库根的 `.signoff/reviews.jsonl`（在
 它验证的是绑定关系：`--verify` 重算当前暂存 diff（没有暂存改动则看工作区）的哈希，只有当存在一份
 针对该哈希的 `approve` 时才退出 0，否则退出 1 并打印「上次被批准的是哪个哈希」。
 
+推送前要不要自动查这一项，由仓库自己定：`.signoff/config.json` 里 `"review_on_push": true` 时，
+pre-push 在七关全过之后多跑一次 `review --verify`——没有存证就打印原因跳过，有存证但哈希对不上就红。
+默认关闭：存证绑的是哈希不是仓库，打开它等于要求每次改动都重新审一次。
+
 ## signoff patterns 失败模式库
 
 `signoff patterns [--min N] [--top N] [--since DAYS] [--md FILE] [--json]`
