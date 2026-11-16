@@ -140,6 +140,7 @@ signoff report --html   # 一页只读看板（默认写 .signoff/report.html）
 | [docs/gates.md](docs/gates.md) | 七道关的判定与修法（唯一权威） |
 | [docs/integrations.md](docs/integrations.md) | 钩子 / CI / MCP / 编辑器接法 |
 | [docs/review-with-local-model.md](docs/review-with-local-model.md) | 用本机模型审代码，并把这一步钉成存证（可选推送门） |
+| [docs/review-pipeline.md](docs/review-pipeline.md) | 复核的五层、配比、顺序与每次迭代的成本 |
 | [docs/trust.md](docs/trust.md) | 证据链、篡改答复、威胁模型 |
 | [docs/COMPARISON.md](docs/COMPARISON.md) | 匿名对照（含象限图） |
 | [docs/SURFACES.md](docs/SURFACES.md) | 平台薄壳一览 |
@@ -326,6 +327,7 @@ Trust model and what it does not prove: [docs/trust.en.md](docs/trust.en.md).
 | [docs/gates.en.md](docs/gates.en.md) | judgement rules and fixes for the seven gates (single authority) |
 | [docs/integrations.en.md](docs/integrations.en.md) | hooks / CI / MCP / editor wiring |
 | [docs/review-with-local-model.en.md](docs/review-with-local-model.en.md) | reviewing with a local model, and pinning it as an attestation (optional push gate) |
+| [docs/review-pipeline.en.md](docs/review-pipeline.en.md) | the five review layers, their ratios, order and cost per iteration |
 | [docs/trust.en.md](docs/trust.en.md) | evidence chain, tamper answers, threat model |
 | [docs/COMPARISON.en.md](docs/COMPARISON.en.md) | anonymous comparison (with the quadrant image) |
 | [docs/SURFACES.en.md](docs/SURFACES.en.md) | platform shells at a glance |

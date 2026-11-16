@@ -150,6 +150,7 @@ Trust model and what it does not prove: [docs/trust.en.md](docs/trust.en.md).
 | [docs/gates.en.md](docs/gates.en.md) | judgement rules and fixes for the seven gates (single authority) |
 | [docs/integrations.en.md](docs/integrations.en.md) | hooks / CI / MCP / editor wiring |
 | [docs/review-with-local-model.en.md](docs/review-with-local-model.en.md) | reviewing with a local model, and pinning it as an attestation (optional push gate) |
+| [docs/review-pipeline.en.md](docs/review-pipeline.en.md) | the five review layers, their ratios, order and cost per iteration |
 | [docs/trust.en.md](docs/trust.en.md) | evidence chain, tamper answers, threat model |
 | [docs/COMPARISON.en.md](docs/COMPARISON.en.md) | anonymous comparison (with the quadrant image) |
 | [docs/SURFACES.en.md](docs/SURFACES.en.md) | platform shells at a glance |
