@@ -103,7 +103,7 @@ L3 的边际价值在「断言写得出来」的地方最低，在「断言写�
 | 可选 pre-push 评审检查 | 已是机制（`review_on_push`） |
 | 风险分级 → 决定 L3 强度 | 纪律（人工判断） |
 | diff 体积上限 | 纪律（待写成检查） |
-| 变异测试 | 全量基线（`lib/p2.js` + `lib/cov.js`，91 个变异点，6 个等价变异已排除）：**47 杀 / 44 活 = 51.6%**；`lib/cov.js` 23/48（47.9%）、`lib/p2.js` 24/43（55.8%）。三个 worktree 分区并行跑完（约 55 分钟，串行要 85 分钟），每个 worktree 先各自验基线 660 全绿再开跑。最危险的三处存活点全是阈值边界：`lib/p2.js:272`/`:273` 把 `min-scenario`/`min-assertions` 的 `>=` 改成 `>` 没人发现，`lib/cov.js:239` 的 `pct >= a.min` 同样——**正好等于门槛的那一次没有测试**。A3 已补成对断言（N / N+1、`--min` 正好等于实测值）并逐个复测，5 个目标点全部转红；剩余约 39 条按 [`docs/plan-stage3.md`](plan-stage3.md) 的顺序销。跑前读 `.signoff/risk.json` 排序（`--no-risk` 可关），每次结果追加 `.signoff/mutants-history.jsonl` |
+| 变异测试 | 全量基线（`lib/p2.js` + `lib/cov.js`，91 个变异点，6 个等价变异已排除）：**67 杀 / 24 活 = 73.6%**；`lib/cov.js` 41/48（85.4%）、`lib/p2.js` 26/43（60.5%）。基线当轮是 47/44（51.6%），A3 与阶段 3 目标 1 之后重测到这个数。两个 worktree 各承担半个分区并行跑完，每个先验基线 689 全绿再开跑。最危险的一批存活点原来是阈值边界：`lib/p2.js:272`/`:273` 把 `min-scenario`/`min-assertions` 的 `>=` 改成 `>` 没人发现，`lib/cov.js:239` 的 `pct >= a.min` 同样——**正好等于门槛的那一次没有测试**；现在这三处都有成对断言（N / N+1、`--min` 正好等于实测值）并逐个复测转红。剩余 24 条按 [`docs/plan-stage3.md`](plan-stage3.md) 的顺序销。跑前读 `.signoff/risk.json` 排序（`--no-risk` 可关），每次结果追加 `.signoff/mutants-history.jsonl` |
 | 风险建议器 | 已实现（`signoff risk`）：按规则给每个改动文件打分并给理由，读 `.signoff/mutants.json` 的存活点与该文件的变异分（表里直接显示 `mutation 5/8 killed (62.5%)`），永远 exit 0、永不改判定。`tools/`、`verify/` 记 +4（「测量面」：它坏了所有分数都不可信，比闸门本身更该先看）；实测变异分 <60% 再 +2（这条权重来自 51.6% 那次全量基线，不是拍的：`lib/cov.js` 47.9%、`lib/p2.js` 55.8%，两个闸门模块正好是分最低的两个文件） |
 | 报告页的「审查手段本身」 | 已实现（`signoff report`）：回放缺陷条数、变异分趋势、最弱文件表，数字全部现算自 `verify/replay/defects.json` 与 `.signoff/mutants-history.jsonl`，不估不编 |
 | 缺陷回放集 | 已就位（`node tools/replay.js`）：4 条历史缺陷，放回去必须当场变红 |
