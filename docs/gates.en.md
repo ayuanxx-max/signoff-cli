@@ -65,6 +65,12 @@ Task cards live in `tasks/<id>/card.json`:
 | `plan` | cards whose scopes intersect by prefix or wildcard go into different waves; prints the waves |
 | `collect --changed` | every changed file must be claimed by a card, and cards that changed nothing are listed |
 
+With no task cards `validate` prints `[p3] SKIPPED no task cards` (exit code 0): it judged nothing, so it must not
+read as `PASS`.
+
+`p3` runs inside `signoff all` (the CI path), not in the `pre-commit` chain — a hand commit does not run it, which is
+consistent with "the hook runs p1/p2/p4/p5/sec(+cov)".
+
 ## p4 Risky actions
 
 `signoff p4 {ask|confirm|verify|checkpoint|anchor|path|export}`

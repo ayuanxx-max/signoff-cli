@@ -71,6 +71,11 @@
 | `plan` | scope 前缀或通配相交的卡排进不同波，输出 wave 列表 |
 | `collect --changed` | 每个改动文件都必须被某张卡认领，并列「改了却没交东西」的卡 |
 
+没有任务卡时 `validate` 输出 `[p3] SKIPPED no task cards`（退出码 0）：它没判任何东西，就不该显示成 `PASS`。
+
+`p3` 在 `signoff all`（也就是 CI 那条路）里跑，不在 `pre-commit` 链条里——所以手工提交时它不参与，
+这点和「钩子跑 p1/p2/p4/p5/sec(+cov)」的说法一致。
+
 ## p4 危险动作
 
 `signoff p4 {ask|confirm|verify|checkpoint|anchor|path|export}`
@@ -295,6 +300,12 @@ Task cards live in `tasks/<id>/card.json`:
 | `validate` | five fields present, ids unique, scope is an array of strings |
 | `plan` | cards whose scopes intersect by prefix or wildcard go into different waves; prints the waves |
 | `collect --changed` | every changed file must be claimed by a card, and cards that changed nothing are listed |
+
+With no task cards `validate` prints `[p3] SKIPPED no task cards` (exit code 0): it judged nothing, so it must not
+read as `PASS`.
+
+`p3` runs inside `signoff all` (the CI path), not in the `pre-commit` chain — a hand commit does not run it, which is
+consistent with "the hook runs p1/p2/p4/p5/sec(+cov)".
 
 ### p4 Risky actions
 

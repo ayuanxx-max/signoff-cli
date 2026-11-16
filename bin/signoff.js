@@ -149,13 +149,26 @@ function runSecrets(args) {
 }
 
 function runAll(args) {
+  // Coverage 是按数据选择加入的：仓库声明了 coverage.min 就严格判；没声明就显式跳过并说明，
+  // 而不是固定塞一个 --allow-missing 让「没测」看起来像「达标」。
+  let cfg = {};
+  try {
+    cfg = JSON.parse(fs.readFileSync(path.join(process.cwd(), ".signoff", "config.json"), "utf8")) || {};
+  } catch (e) {
+    cfg = {};
+  }
+  const covCfg = cfg.coverage;
+  const covMin = typeof covCfg === "object" && covCfg && covCfg.min !== undefined ? covCfg.min : 80;
+  const covArgs = covCfg ? ["--diff", "--min", String(covMin)] : ["--allow-missing", "--diff"];
+  if (!covCfg) console.log("[all] cov: no coverage.min in .signoff/config.json — this gate is skipped, not passed");
   const steps = [
     ["p1", args],
     ["p2", args],
+    // p3 是「并发任务」那关：signoff.json 声明了它，all 就必须真的跑它，否则声明是空话。
+    ["p3", ["validate"]],
     ["p5", []],
     ["p4", ["verify"]],
-    // Coverage is opt-in on data: no coverage file means "not measured", not "failed".
-    ["cov", ["--allow-missing", "--diff"]],
+    ["cov", covArgs],
   ];
   let code = 0;
   console.log("\n== signoff secrets ==");

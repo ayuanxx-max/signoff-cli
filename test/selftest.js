@@ -657,6 +657,24 @@ function main() {
     }
     check("p2: zero apps reports skipped instead of a bare pass", p2ej && p2ej.skipped === "no apps" ? 1 : 0, 1, p2e.stdout.trim());
     check("p2: the human line says SKIPPED, not PASS", /\[p2\] SKIPPED no apps/.test(run(["p2"], srepo).stdout) ? 1 : 0, 1);
+    const covr = run(["cov", "--allow-missing", "--diff"], srepo);
+    check("cov: no data with --allow-missing says SKIPPED, not PASS", /\[cov\] SKIPPED/.test(covr.stdout) ? 1 : 0, 1, covr.stdout.trim());
+    let covj = null;
+    try {
+      covj = JSON.parse(run(["cov", "--allow-missing", "--diff", "--json"], srepo).stdout);
+    } catch (e) {
+      covj = null;
+    }
+    check("cov: json carries skipped instead of a bare pass", covj && covj.skipped === "no coverage data" ? 1 : 0, 1, JSON.stringify(covj));
+    const p3r = run(["p3", "validate"], srepo);
+    check("p3: no task cards says SKIPPED, not PASS", /\[p3\] SKIPPED no task cards/.test(p3r.stdout) ? 1 : 0, 1, p3r.stdout.trim());
+    let p3j = null;
+    try {
+      p3j = JSON.parse(run(["p3", "validate", "--json"], srepo).stdout);
+    } catch (e) {
+      p3j = null;
+    }
+    check("p3: json carries skipped", p3j && p3j.skipped === "no task cards" ? 1 : 0, 1, JSON.stringify(p3j));
     r = g(["hook", "pre-commit"]);
     check("guard hook pass", r.status, 0);
     const markerAfterPass = JSON.parse(fs.readFileSync(path.join(repo, ".signoff", "passed"), "utf8"));
@@ -1343,6 +1361,9 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
 }
 
       check("action runs signoff", /run: signoff \$\{\{ inputs.args \}\}/.test(action), true);
+      check("action: a failed signature audit is fatal unless explicitly skipped", /npm audit signatures failed; set skip-signature-audit/.test(action) && !/audit signatures \|\| echo/.test(action), true);
+      check("release: a check that could not run is skip, not pass", /addSkip\("surface-encoding"/.test(fs.readFileSync(path.join(__dirname, "..", "lib", "release.js"), "utf8")), true);
+      check("release: skip does not count toward the pass total", /judged\.length - failed\.length/.test(fs.readFileSync(path.join(__dirname, "..", "lib", "release.js"), "utf8")), true);
       check("integrations doc lists actions", /uses: ayuanxx-max\/signoff-cli/.test(fs.readFileSync(path.join(__dirname, "..", "docs", "integrations.md"), "utf8")), true);
 
       // 16. Deterministic fuzz: parsers must never throw on hostile input, and the

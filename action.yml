@@ -13,12 +13,27 @@ inputs:
     description: signoff-cli version to install
     required: false
     default: 4.8.0
+  skip-signature-audit:
+    description: continue when `npm audit signatures` fails (default false; only for registries without provenance)
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
     - name: verify registry signature
       shell: bash
-      run: npm audit signatures || echo 'signature audit unavailable; continuing (see docs/verify-release.md)'
+      run: |
+        # 签名校验失败默认判红：审计不通过还要继续装，等于把供应链检查写成注释。
+        # 确实在无 provenance 的镜像上跑，必须显式传 skip-signature-audit: true，日志里会留 warning。
+        if npm audit signatures; then
+          exit 0
+        fi
+        if [ "${{ inputs.skip-signature-audit }}" = "true" ]; then
+          echo "::warning::npm audit signatures failed; continuing because skip-signature-audit=true"
+          exit 0
+        fi
+        echo "::error::npm audit signatures failed; set skip-signature-audit: true only if this registry has no provenance"
+        exit 1
     - name: install
       shell: bash
       run: npm i -g signoff-cli@${{ inputs.version }} --no-fund --no-audit
