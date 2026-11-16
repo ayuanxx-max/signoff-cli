@@ -103,6 +103,6 @@ Levers for cost, largest first: **cut steps** (45 → 25 saves about 44%), **kee
 | optional pre-push review check | already mechanism (`review_on_push`) |
 | risk grading → decides L3 strength | discipline (human judgement) |
 | diff size cap | discipline (to become a check) |
-| mutation testing | tool in place (`node tools/mutate.js`: change one operator, run the criterion, always restore), baseline score not measured yet |
+| mutation testing | tool in place (`node tools/mutate.js`). Measured baseline: 8 sampled mutants, 3 killed (37.5%); the first 8 sites (formatting helpers) all survived (0/8). The CLI-parsing and output-format branches of p2/cov are not watched by any assertion |
 | defect replay set | in place (`node tools/replay.js`): four historical defects, each must go red as soon as it is put back |
 | defect density / escape rate metrics | not implemented |

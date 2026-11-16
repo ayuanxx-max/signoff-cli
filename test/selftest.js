@@ -675,6 +675,9 @@ function main() {
       p3j = null;
     }
     check("p3: json carries skipped", p3j && p3j.skipped === "no task cards" ? 1 : 0, 1, JSON.stringify(p3j));
+    // 变异测试给出的 5 个存活点都落在 p2 的参数解析分支上，补两条最便宜的：--help 与未知选项。
+    check("p2: --help prints usage", /usage: signoff p2/.test(run(["p2", "--help"], srepo).stdout), true);
+    check("p2: an unknown option is a usage error", run(["p2", "--nope"], srepo).status, 2);
     r = g(["hook", "pre-commit"]);
     check("guard hook pass", r.status, 0);
     const markerAfterPass = JSON.parse(fs.readFileSync(path.join(repo, ".signoff", "passed"), "utf8"));

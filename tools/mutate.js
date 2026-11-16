@@ -64,7 +64,7 @@ function candidates(file) {
 }
 
 function parseArgs(argv) {
-  const a = { files: null, dir: "lib", cmd: "node test/smoke.js", max: 30, timeout: 120000, min: null, list: false, json: false };
+  const a = { files: null, dir: "lib", cmd: "node test/smoke.js", max: 30, offset: 0, timeout: 120000, min: null, list: false, json: false };
   for (let i = 0; i < argv.length; i++) {
     const t = String(argv[i]);
     const eq = t.indexOf("=");
@@ -75,6 +75,7 @@ function parseArgs(argv) {
     else if (key === "dir") a.dir = String(next());
     else if (key === "cmd") a.cmd = String(next());
     else if (key === "max") a.max = Number(next());
+    else if (key === "offset") a.offset = Number(next());
     else if (key === "timeout") a.timeout = Number(next());
     else if (key === "min") a.min = Number(next());
     else if (key === "list") a.list = true;
@@ -90,8 +91,8 @@ function main() {
   const a = parseArgs(process.argv.slice(2));
   if (a.help) {
     process.stdout.write(
-      "usage: node tools/mutate.mjs [--files a.js,b.js | --dir lib] [--cmd \"node test/smoke.js\"]\n" +
-        "                             [--max N] [--timeout MS] [--min PCT] [--list] [--json]\n\n" +
+      "usage: node tools/mutate.js [--files a.js,b.js | --dir lib] [--cmd \"node test/smoke.js\"]\n" +
+        "                             [--max N] [--offset N] [--timeout MS] [--min PCT] [--list] [--json]\n\n" +
         "每个变异体单独跑一次 --cmd：红了算 killed，还绿着算 survived。\n" +
         "跑完一定还原文件；--min 只在你想让它当闸门时才给。\n"
     );
@@ -115,7 +116,7 @@ function main() {
     process.stdout.write("[mutate] SKIPPED no mutation sites in " + (a.files ? a.files.join(", ") : a.dir) + "\n");
     return 0;
   }
-  const picked = pools.slice(0, a.max);
+  const picked = pools.slice(Math.max(0, a.offset || 0), Math.max(0, a.offset || 0) + a.max);
   if (a.list) {
     for (const m of picked) process.stdout.write(`${m.file}:${m.line}  ${m.op}  ${m.before}\n`);
     process.stdout.write(`[mutate] ${picked.length} mutants listed of ${pools.length} sites\n`);
