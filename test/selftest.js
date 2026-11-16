@@ -2462,6 +2462,7 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
   {
     const fixture = path.join(__dirname, "..", "verify", "fixtures", "mutate-sample.js");
     const before = fs.readFileSync(fixture, "utf8");
+    const histFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "signoff-hist-")), "h.jsonl");
     const mr = spawnSync(
       process.execPath,
       [
@@ -2470,6 +2471,8 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
         "verify/fixtures/mutate-sample.js",
         "--cmd",
         "node verify/fixtures/mutate-sample.test.js",
+        "--history",
+        histFile,
         "--json",
       ],
       { env: gitEnv(), cwd: path.join(__dirname, ".."), encoding: "utf8" }
@@ -2508,7 +2511,7 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     check("mutate: the run order is recorded", mj && Array.isArray(mj.order) && mj.order[0] && mj.order[0].file, "verify/fixtures/mutate-sample.js", JSON.stringify(mj && mj.order));
     let histRow = null;
     try {
-      const rows = fs.readFileSync(path.join(__dirname, "..", ".signoff", "mutants-history.jsonl"), "utf8").trim().split(/\r?\n/);
+      const rows = fs.readFileSync(histFile, "utf8").trim().split(/\r?\n/);
       histRow = JSON.parse(rows[rows.length - 1]);
     } catch (e) {
       histRow = null;

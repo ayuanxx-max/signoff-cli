@@ -75,7 +75,7 @@ function candidates(file) {
 }
 
 function parseArgs(argv) {
-  const a = { files: null, dir: "lib", cmd: "node test/smoke.js", max: 30, offset: 0, timeout: 120000, min: null, list: false, json: false, noRisk: false };
+  const a = { files: null, dir: "lib", cmd: "node test/smoke.js", max: 30, offset: 0, timeout: 120000, min: null, list: false, json: false, noRisk: false, history: null };
   for (let i = 0; i < argv.length; i++) {
     const t = String(argv[i]);
     const eq = t.indexOf("=");
@@ -92,6 +92,7 @@ function parseArgs(argv) {
     else if (key === "list") a.list = true;
     else if (key === "json") a.json = true;
     else if (key === "no-risk") a.noRisk = true;
+    else if (key === "history") a.history = String(next());
     else if (t === "-h" || key === "help") a.help = true;
     else if (t.startsWith("-")) a.error = "unknown option: " + t;
     else a.error = "unexpected argument: " + t;
@@ -124,19 +125,21 @@ function previousFiles() {
   return (j && j.files) || {};
 }
 
-function appendHistory(row) {
+function appendHistory(row, file) {
+  const target = file ? path.resolve(ROOT, file) : HISTORY;
   try {
-    fs.mkdirSync(path.dirname(HISTORY), { recursive: true });
-    fs.appendFileSync(HISTORY, JSON.stringify(row) + "\n");
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.appendFileSync(target, JSON.stringify(row) + "\n");
   } catch (e) {
     /* 趋势丢了不影响这次判定 */
   }
 }
 
-function recentScores(limit) {
+function recentScores(limit, file) {
+  const target = file ? path.resolve(ROOT, file) : HISTORY;
   try {
     return fs
-      .readFileSync(HISTORY, "utf8")
+      .readFileSync(target, "utf8")
       .split(/\r?\n/)
       .filter(Boolean)
       .slice(-limit)
@@ -151,7 +154,7 @@ function main() {
   if (a.help) {
     process.stdout.write(
       "usage: node tools/mutate.js [--files a.js,b.js | --dir lib] [--cmd \"node test/smoke.js\"]\n" +
-        "                             [--max N] [--offset N] [--timeout MS] [--min PCT] [--list] [--json]\n\n" +
+        "                             [--max N] [--offset N] [--timeout MS] [--min PCT] [--no-risk] [--history FILE] [--list] [--json]\n\n" +
         "每个变异体单独跑一次 --cmd：红了算 killed，还绿着算 survived。\n" +
         "跑完一定还原文件；--min 只在你想让它当闸门时才给。\n"
     );
@@ -270,8 +273,8 @@ function main() {
   } catch (e) {
     /* 写不进就算了，报告还在 stdout */
   }
-  appendHistory({ at, cmd: a.cmd, total: results.length, killed, score, files: curFiles });
-  const recent = recentScores(3);
+  appendHistory({ at, cmd: a.cmd, total: results.length, killed, score, files: curFiles }, a.history);
+  const recent = recentScores(3, a.history);
   const trendNote = recent.length >= 2 ? recent.join("% → ") + "%" : recent.length === 1 ? recent[0] + "%" : "no history yet";
   if (a.json) {
     process.stdout.write(JSON.stringify({ ...payload, trend: recent }) + "\n");
