@@ -1307,6 +1307,12 @@ function main() {
       check("cov: a non-numeric --min is a usage error", covBadMin.status, 2);
       check("cov: the usage error says a number was expected", /expected a number/.test(covBadMin.stderr), true);
       check("cov: a bare dash is not an unknown option", run(["cov", "-"], covRepo, env).status, 0);
+      // 最后一个是「缺值」的两种报错：--min 不带值两边报同一句（看不出差别），
+      // --base / --file 不带值才会分叉——变异版把 undefined 变成字符串 "undefined" 收下了。
+      const covNoBase = run(["cov", "--base"], covRepo, env);
+      check("cov: --base with no value is a usage error", covNoBase.status, 2);
+      check("cov: the missing --base value is named", /expected one argument/.test(covNoBase.stderr), true);
+      check("cov: --file with no value is a usage error", run(["cov", "--file"], covRepo, env).status, 2);
 
       // 基准选择：有 origin/main 就该用它，否则「算哪些改动」跟着本地 HEAD 漂。
       const omRepo = fresh("covom");
@@ -1335,6 +1341,26 @@ function main() {
       fs.writeFileSync(path.join(uniRepo, "中文.js"), "const u1 = 111;\nconst u2 = 2;\n", "utf8");
       const uniJson = tryJson(run(["cov", "--diff", "--base", "HEAD", "--min", "0", "--json"], uniRepo, env).stdout);
       check("cov: a non-ASCII path is not mangled by quoting", uniJson && uniJson.total, 1);
+
+      // diff 模式 + 覆盖率里还有「本次没动过的文件」：不能崩，也不能把它算进分母。
+      // （变异版在这里对 undefined 取 .size，直接抛异常——所以要断言它没崩。）
+      const twoRepo = fresh("covtwo");
+      fs.writeFileSync(path.join(twoRepo, "a.js"), "const a1 = 1;\nconst a2 = 2;\n", "utf8");
+      fs.writeFileSync(path.join(twoRepo, "b.js"), "const b1 = 1;\nconst b2 = 2;\n", "utf8");
+      fs.mkdirSync(path.join(twoRepo, "coverage"), { recursive: true });
+      fs.writeFileSync(
+        path.join(twoRepo, "coverage", "lcov.info"),
+        ["SF:a.js", "DA:1,1", "DA:2,0", "end_of_record", "SF:b.js", "DA:1,1", "DA:2,1", "end_of_record", ""].join("\n"),
+        "utf8"
+      );
+      git(["add", "-A"], twoRepo, env);
+      git(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "base", "--no-verify"], twoRepo, env);
+      fs.writeFileSync(path.join(twoRepo, "a.js"), "const a1 = 11;\nconst a2 = 2;\n", "utf8");
+      const twoRun = run(["cov", "--diff", "--base", "HEAD", "--min", "0", "--json"], twoRepo, env);
+      const twoJson = tryJson(twoRun.stdout);
+      check("cov: a file outside the diff does not crash the gate", twoRun.status, 0);
+      check("cov: only the changed file is judged in diff mode", twoJson && twoJson.total, 1);
+      check("cov: the untouched file stays out of the report", twoJson && twoJson.files, 1);
 
       // app 发现：根目录靠 package.json，子目录两种来源都要认，隐藏目录要跳过。
       const appRepo = fresh("p2apps");
@@ -2671,13 +2697,21 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     check("mutate: --list finds real sites in a gate file", /lib\/p2\.js:\d+/.test(String(listed.stdout)), true);
     check("mutate: equivalent mutants stay out of the denominator", /equivalent excluded/.test(String(listed.stdout)), true);
     // 同一行常有两个方向相反的变异，只有一个真是等价的：op 字段只排除那一个。
+    // 断言用 ignore.json 里的条数现算，加条目时不用改测试；op 匹配一坏，条数与排除数就对不上。
+    const covIgnored = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "verify/mutate/ignore.json"), "utf8")).equivalent.filter(
+      (e) => e.file === "lib/cov.js"
+    ).length;
     const covListed = String(
       spawnSync(process.execPath, ["tools/mutate.js", "--files", "lib/cov.js", "--no-risk", "--max", "999", "--list"], {
         cwd: path.join(__dirname, ".."),
         encoding: "utf8",
       }).stdout
     );
-    check("mutate: an op-scoped equivalent excludes just that op", /\(2 equivalent excluded\)/.test(covListed) ? 1 : 0, 1);
+    check(
+      "mutate: each cov equivalent excludes exactly one site",
+      new RegExp(`\\(${covIgnored} equivalent excluded\\)`).test(covListed) ? 1 : 0,
+      1
+    );
     check("mutate: the opposite op on the same line is still a live site", /lib\/cov\.js:126\s+eq->ne/.test(covListed) ? 1 : 0, 1);
     // 缺陷回放：把 4 条真实逃逸过的缺陷放回去，现在的检查必须当场变红。
     const rr = spawnSync(process.execPath, [path.join(__dirname, "..", "tools", "replay.js"), "--json"], {

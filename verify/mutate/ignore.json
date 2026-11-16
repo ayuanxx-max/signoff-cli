@@ -44,6 +44,13 @@
       "reason": "if (originMain.code === 0 && originMain.out.trim()) ：只有「code 为 0 且输出为空」才会分叉，而 `git rev-parse --verify --quiet origin/main` 命中时必然打印 sha（tag 对象也是 sha），构造不出空输出；code 非 0 时 && 与 || 两边都是假。",
       "date": "2026-11-16",
       "op": "and->or"
+    },
+    {
+      "file": "lib/cov.js",
+      "line": 200,
+      "op": "or->and",
+      "reason": "root = core.git([...], process.cwd()).out.trim() || process.cwd() ：只有 git 输出为空时才会分叉（非 git 目录）。此时 root 变成空串，但随后 load() 里的 path.join(\"\", rel) 仍是相对路径，existsSync 相对 process.cwd() 解析——而 run() 的 root 本来就取自 process.cwd()，所以读到同一个文件；writeJSON(\".signoff/cov.json\") 同理落到同一处。实测（.git/probe-equiv.js 的 cov:200 用例）：非 git 目录下两种实现 stdout/stderr/退出码/写出的 cov.json 逐字节相同。",
+      "date": "2026-11-16"
     }
   ]
 }
