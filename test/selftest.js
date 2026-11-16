@@ -2502,6 +2502,31 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     check("replay: every historical defect is caught when reintroduced", rj ? rj.reproduced : null, rj ? rj.total : -1, JSON.stringify(rj && rj.defects));
   }
 
+  // 风险建议器：排序要讲道理（闸门文件 > 文档），且永远不能把建议变成失败。
+  {
+    const rdir = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-risk-"));
+    const rgit = (args) => spawnSync("git", args, { cwd: rdir, encoding: "utf8", env: gitEnv() });
+    rgit(["init", "-q"]);
+    fs.mkdirSync(path.join(rdir, "lib"), { recursive: true });
+    fs.writeFileSync(path.join(rdir, "lib", "p2.js"), "module.exports = 1;\n", "utf8");
+    fs.writeFileSync(path.join(rdir, "README.md"), "hi\n", "utf8");
+    rgit(["add", "-A"]);
+    rgit(["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "base"]);
+    fs.appendFileSync(path.join(rdir, "lib", "p2.js"), "module.exports = 2;\n");
+    fs.appendFileSync(path.join(rdir, "README.md"), "more\n");
+    const rk = run(["risk", "--json"], rdir);
+    let rkj = null;
+    try {
+      rkj = JSON.parse(String(rk.stdout).trim().split(/\r?\n/).pop());
+    } catch (e) {
+      rkj = null;
+    }
+    check("risk: a gate module outranks a doc", rkj && rkj.files[0].path, "lib/p2.js", JSON.stringify(rkj && rkj.files.map((f) => [f.path, f.score])));
+    check("risk: it never turns a suggestion into a failure", rk.status, 0);
+    check("risk: every point carries a reason", rkj && rkj.files[0].reasons.length > 0 ? 1 : 0, 1);
+    check("risk: the payload says it is advisory", rkj && rkj.advisory, true);
+  }
+
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);
   for (const line of PASS) console.log(`PASS ${line}`);
   for (const line of FAIL) console.log(`FAIL ${line}`);

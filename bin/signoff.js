@@ -63,7 +63,7 @@ const HELP = `SignOff / 落印 — make "done" provable
   signoff report --would-block               read-only preview: what would block a commit now
 signoff doctor [--json] [--fix]            why is (or isn't) it guarded? --fix repairs it
   signoff secrets [--staged|--all] [--json]   scan staged files for leaked credentials
-  signoff cov [--diff] [--min 80] [--json]   how much of this change the suite executed\n  signoff init --preset node|python|go|java   start from a curated gate config\n  signoff init --editor vscode               .vscode/tasks.json + problem matchers
+  signoff cov [--diff] [--min 80] [--json]   how much of this change the suite executed\n  signoff risk [--base REF] [--json]         where to spend review budget (advisory, always exit 0)\n  signoff init --preset node|python|go|java   start from a curated gate config\n  signoff init --editor vscode               .vscode/tasks.json + problem matchers
   signoff explain <p1..p5>                   what a gate checks and how it decides
   signoff mcp                                serve the gates over stdio (MCP clients)
   signoff audit [--range A..B] [--strict]    did the commits that landed carry a trailer?
@@ -249,6 +249,7 @@ if (cmd === "release") {
 }
 if (cmd === "explain") process.exit(require("../lib/explain.js").run(rest));
 if (cmd === "cov") process.exit(require("../lib/cov.js").run(rest));
+if (cmd === "risk") process.exit(require("../lib/risk.js").main(rest));
 if (cmd === "secrets") {
   maybeBootstrap("secrets");
   process.exit(require("../lib/secrets.js").run(rest));
