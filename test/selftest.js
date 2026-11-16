@@ -687,6 +687,18 @@ function main() {
     check("p2: --key=value is accepted, not read as an option name", /unrecognized arguments/.test(inline.stdout + inline.stderr) ? 1 : 0, 0, inline.stdout + inline.stderr);
     const boolWithVal = run(["p2", "--strict=1"], srepo);
     check("p2: a boolean flag with a value is rejected", boolWithVal.status === 2 && /ignored explicit argument '1'/.test(boolWithVal.stderr + boolWithVal.stdout) ? 1 : 0, 1, boolWithVal.stderr);
+    // A3：阈值边界。把 >= 写成 > 不会改变「1 大于 0」这类情形，只有「正好等于」才会分叉，
+    // 所以数量从当前仓库现读，断言写成 N / N+1 成对出现——单边断言抓不住这个洞。
+    {
+      const here = path.join(__dirname, "..");
+      const base = JSON.parse(run(["p2", "--json"], here).stdout);
+      const nA = base.assertions;
+      const nS = base.scenarioApps;
+      check("p2: assertions exactly at min-assertions pass", run(["p2", "--min-assertions", String(nA), "--min-scenario", String(nS)], here).status, 0);
+      check("p2: one assertion short of min-assertions fails", run(["p2", "--min-assertions", String(nA + 1), "--min-scenario", String(nS)], here).status, 1);
+      check("p2: scenarios exactly at min-scenario pass", run(["p2", "--min-scenario", String(nS), "--min-assertions", "0"], here).status, 0);
+      check("p2: one scenario short of min-scenario fails", run(["p2", "--min-scenario", String(nS + 1), "--min-assertions", "0"], here).status, 1);
+    }
     const p2json = run(["p2", "--json"], srepo);
     check("p2: --json keeps python's comma-space separators", /^\{"gate": "p2", "ok": /.test(p2json.stdout), true, p2json.stdout.slice(0, 40));
     r = g(["hook", "pre-commit"]);
@@ -1187,6 +1199,30 @@ function main() {
       check("cov diff mode is reported", JSON.parse(covDiff.stdout).mode, "diff");
       check("cov without data exits 2", run(["cov", "--file", "missing.json"], covRepo, env).status, 2);
       check("cov allows missing data", run(["cov", "--file", "missing.json", "--allow-missing"], covRepo, env).status, 0);
+      // A3：正好等于门槛的覆盖率必须算通过（>= 写成 > 只有这一档会分叉）。
+      check("cov: exactly at the threshold still passes", run(["cov", "--min", "80"], covRepo, env).status, 0);
+      check("cov: one point under the threshold fails", run(["cov", "--min", "81"], covRepo, env).status, 1);
+      check("cov: --min without a value is a usage error", run(["cov", "--min"], covRepo, env).status, 2);
+      // A3：默认 base 应回落到 HEAD；否则 --diff 会静默变成全量模式（判定对象换了还说没事）。
+      const diffDefault = JSON.parse(run(["cov", "--diff", "--min", "0", "--json"], covRepo, env).stdout);
+      check("cov: an explicit diff without --base still compares against HEAD", diffDefault.mode, "diff");
+      // A3：单行新增的 hunk 头没有 count 字段（@@ -3,0 +4 @@），解析成 NaN 会当成「没有可判的行」。
+      const hunkRepo = fresh("covhunk");
+      const hunkLines = ["const v0 = 0;", "const v1 = 1;", "const v2 = 2;"];
+      fs.writeFileSync(path.join(hunkRepo, "b.js"), hunkLines.join("\n") + "\n", "utf8");
+      fs.mkdirSync(path.join(hunkRepo, "coverage"), { recursive: true });
+      fs.writeFileSync(
+        path.join(hunkRepo, "coverage", "lcov.info"),
+        ["SF:b.js", "DA:1,1", "DA:2,1", "DA:3,1", "DA:4,0", "end_of_record", ""].join("\n"),
+        "utf8"
+      );
+      git(["add", "-A"], hunkRepo, env);
+      git(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "base", "--no-verify"], hunkRepo, env);
+      fs.appendFileSync(path.join(hunkRepo, "b.js"), "const v3 = 3;\n");
+      git(["add", "b.js"], hunkRepo, env);
+      const hunkJson = JSON.parse(run(["cov", "--diff", "--base", "HEAD", "--min", "0", "--json"], hunkRepo, env).stdout);
+      check("cov: a single added line counts as one judged line", hunkJson.total, 1);
+      check("cov: a single added uncovered line is not reported as nothing to judge", hunkJson.skipped, null);
 
       // 8. CI annotations: a finding becomes a line annotation, not a log paragraph.
       const ciRepo = fresh("ci");
