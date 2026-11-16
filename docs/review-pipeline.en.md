@@ -103,5 +103,6 @@ Levers for cost, largest first: **cut steps** (45 → 25 saves about 44%), **kee
 | optional pre-push review check | already mechanism (`review_on_push`) |
 | risk grading → decides L3 strength | discipline (human judgement) |
 | diff size cap | discipline (to become a check) |
-| mutation testing, defect replay set | not implemented |
+| mutation testing | tool in place (`node tools/mutate.js`: change one operator, run the criterion, always restore), baseline score not measured yet |
+| defect replay set | not implemented |
 | defect density / escape rate metrics | not implemented |

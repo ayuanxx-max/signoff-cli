@@ -59,6 +59,7 @@
     "test:fast": "node test/smoke.js",
     "parity": "python test/selftest.py",
     "arch": "node tools/arch-health.mjs",
+    "mutate": "node tools/mutate.js",
     "postinstall": "node bin/signoff.js ensure --from-install --quiet",
     "typecheck": "tsc -p jsconfig.json"
   },

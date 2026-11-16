@@ -2444,6 +2444,39 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     );
   }
 
+  // 变异测试引擎：先证明它「能杀」，再证明它「会把活着的报出来」，最后证明它还原了文件。
+  {
+    const fixture = path.join(__dirname, "..", "verify", "fixtures", "mutate-sample.js");
+    const before = fs.readFileSync(fixture, "utf8");
+    const mr = spawnSync(
+      process.execPath,
+      [
+        path.join(__dirname, "..", "tools", "mutate.js"),
+        "--files",
+        "verify/fixtures/mutate-sample.js",
+        "--cmd",
+        "node verify/fixtures/mutate-sample.test.js",
+        "--json",
+      ],
+      { env: gitEnv(), cwd: path.join(__dirname, ".."), encoding: "utf8" }
+    );
+    let mj = null;
+    try {
+      mj = JSON.parse(String(mr.stdout).trim().split(/\r?\n/).pop());
+    } catch (e) {
+      mj = null;
+    }
+    check("mutate: kills the mutants its tests can see", mj ? mj.killed : null, 2, JSON.stringify(mj));
+    check("mutate: reports a survivor no test covers", mj ? mj.survived : null, 1, JSON.stringify(mj));
+    check("mutate: restores the source after the run", fs.readFileSync(fixture, "utf8") === before, true);
+    const listed = spawnSync(process.execPath, [path.join(__dirname, "..", "tools", "mutate.js"), "--files", "lib/p2.js", "--list"], {
+      env: gitEnv(),
+      cwd: path.join(__dirname, ".."),
+      encoding: "utf8",
+    });
+    check("mutate: --list finds real sites in a gate file", /lib\/p2\.js:\d+/.test(String(listed.stdout)), true);
+  }
+
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);
   for (const line of PASS) console.log(`PASS ${line}`);
   for (const line of FAIL) console.log(`FAIL ${line}`);
