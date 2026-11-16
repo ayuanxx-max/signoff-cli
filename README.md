@@ -61,7 +61,15 @@ signoff report --html   # 一页只读看板（默认写 .signoff/report.html）
 
 ![SignOff 架构：谁在调用、谁在判定、结果落在哪、依赖什么](docs/diagrams/signoff-1-capability.png)
 
-三条红线在任何模式下都不放开：`--no-verify`、`SIGNOFF_SKIP=1`、调阈值让红变绿。
+三条红线的真实含义是**可以绕过，但绕不过记录**：
+
+| 绕过方式 | 留下什么 |
+| --- | --- |
+| `SIGNOFF_SKIP=1 git commit` | `.signoff/skips.log` 里一条带时间与暂存树哈希的记录 |
+| `git commit --no-verify` | 什么都不留——所以 **CI 是唯一不可绕过的边界** |
+| 调低阈值让红变绿 | 只改变你自己的判定标准；仓库里的默认阈值不会被悄悄调低 |
+
+工具不提供「让红变绿又不留痕」的开关，也不提供付费解锁通关。
 
 ---
 
@@ -239,7 +247,15 @@ Ask the same question in the terminal: `signoff explain p1`.
 
 ![SignOff architecture: who calls, who judges, where the result lands, what it depends on](docs/diagrams/signoff-1-capability-en.png)
 
-Three red lines are never relaxed in any mode: `--no-verify`, `SIGNOFF_SKIP=1`, and moving a threshold to turn red into green.
+What the three red lines really mean is **you can bypass them, but not bypass the record**:
+
+| Bypass | What it leaves behind |
+| --- | --- |
+| `SIGNOFF_SKIP=1 git commit` | a line in `.signoff/skips.log` with the time and the staged tree hash |
+| `git commit --no-verify` | nothing at all — which is why **CI is the only boundary that cannot be bypassed** |
+| lowering a threshold to turn red into green | it only changes your own criterion; the repository defaults are not quietly lowered |
+
+The tool offers no switch that turns red into green without a trace, and no paid unlock.
 
 ---
 

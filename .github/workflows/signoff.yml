@@ -25,7 +25,9 @@ jobs:
         with: { python-version: "3.11" }
       # npx dedupes the spec to this project when the repo under guard is signoff-cli
       # itself, installs nothing and leaves `signoff` off PATH (exit 127, no gate ran).
-      - run: npm i -g --silent signoff-cli@4.7.1
+      # 用本仓库的代码判本仓库：装某个已发布版本，等于让 CI 拿旧闸门逻辑判新代码，
+      # 新语义（skip 行、p2/p3 的 SKIPPED）永远测不到。--ignore-scripts 保住 CI 的确定性。
+      - run: npm i -g --silent --ignore-scripts .
       - run: signoff guard --ci
       # The installed cli bootstraps a fresh clone (empty .git/hooks) and, before 4.8,
       # rewrote this file with its stock template. This repo's version is the truth.

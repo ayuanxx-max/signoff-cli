@@ -1361,6 +1361,8 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
 }
 
       check("action runs signoff", /run: signoff \$\{\{ inputs.args \}\}/.test(action), true);
+      const wfSelf = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", "signoff.yml"), "utf8");
+      check("ci judges this repo with this repo's code", /npm i -g --silent --ignore-scripts \./.test(wfSelf) && !/signoff-cli@4\./.test(wfSelf), true);
       check("action: a failed signature audit is fatal unless explicitly skipped", /npm audit signatures failed; set skip-signature-audit/.test(action) && !/audit signatures \|\| echo/.test(action), true);
       check("release: a check that could not run is skip, not pass", /addSkip\("surface-encoding"/.test(fs.readFileSync(path.join(__dirname, "..", "lib", "release.js"), "utf8")), true);
       check("release: skip does not count toward the pass total", /judged\.length - failed\.length/.test(fs.readFileSync(path.join(__dirname, "..", "lib", "release.js"), "utf8")), true);

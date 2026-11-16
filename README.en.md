@@ -62,7 +62,15 @@ Ask the same question in the terminal: `signoff explain p1`.
 
 ![SignOff architecture: who calls, who judges, where the result lands, what it depends on](docs/diagrams/signoff-1-capability-en.png)
 
-Three red lines are never relaxed in any mode: `--no-verify`, `SIGNOFF_SKIP=1`, and moving a threshold to turn red into green.
+What the three red lines really mean is **you can bypass them, but not bypass the record**:
+
+| Bypass | What it leaves behind |
+| --- | --- |
+| `SIGNOFF_SKIP=1 git commit` | a line in `.signoff/skips.log` with the time and the staged tree hash |
+| `git commit --no-verify` | nothing at all — which is why **CI is the only boundary that cannot be bypassed** |
+| lowering a threshold to turn red into green | it only changes your own criterion; the repository defaults are not quietly lowered |
+
+The tool offers no switch that turns red into green without a trace, and no paid unlock.
 
 ---
 
