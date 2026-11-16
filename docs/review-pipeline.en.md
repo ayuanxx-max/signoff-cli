@@ -103,7 +103,7 @@ Levers for cost, largest first: **cut steps** (45 → 25 saves about 44%), **kee
 | optional pre-push review check | already mechanism (`review_on_push`) |
 | risk grading → decides L3 strength | discipline (human judgement) |
 | diff size cap | discipline (to become a check) |
-| mutation testing | tool in place (`node tools/mutate.js`). Same sample window (`lib/p2.js:201–225`, 8 mutants): 3 killed before the new assertions (37.5%), 4 after (50%); four equivalent mutants are registered in `verify/mutate/ignore.json` and kept out of the denominator. Remaining survivors: the `--help` branch and both directions of `tok !== "-"` |
-| risk advisor | implemented (`signoff risk`): scores each changed file with rules and prints the reasons, reads the survivors in `.signoff/mutants.json`, always exits 0, never changes a verdict |
+| mutation testing | tool in place (`node tools/mutate.js`). Same sample window (`lib/p2.js:201–225`, 8 mutants): 3 killed before the new assertions (37.5%), 4 after (50%); four equivalent mutants are registered in `verify/mutate/ignore.json` and kept out of the denominator. Remaining survivors: the `--help` branch and both directions of `tok !== "-"`. It sorts by `.signoff/risk.json` before sampling (`--no-risk` disables that) and appends every run to `.signoff/mutants-history.jsonl` |
+| risk advisor | implemented (`signoff risk`): scores each changed file with rules and prints the reasons, reads the survivors and the measured mutation score for that file in `.signoff/mutants.json` (the table shows `mutation 5/8 killed (62.5%)`), always exits 0, never changes a verdict |
 | defect replay set | in place (`node tools/replay.js`): four historical defects, each must go red as soon as it is put back |
 | defect density / escape rate metrics | not implemented |

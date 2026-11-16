@@ -2500,6 +2500,16 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
       rj = null;
     }
     check("replay: every historical defect is caught when reintroduced", rj ? rj.reproduced : null, rj ? rj.total : -1, JSON.stringify(rj && rj.defects));
+    // A1：顺序要落进报告（它决定 --max 抽到哪些点），每次结果要进历史趋势。
+    check("mutate: the run order is recorded", mj && Array.isArray(mj.order) && mj.order[0] && mj.order[0].file, "verify/fixtures/mutate-sample.js", JSON.stringify(mj && mj.order));
+    let histRow = null;
+    try {
+      const rows = fs.readFileSync(path.join(__dirname, "..", ".signoff", "mutants-history.jsonl"), "utf8").trim().split(/\r?\n/);
+      histRow = JSON.parse(rows[rows.length - 1]);
+    } catch (e) {
+      histRow = null;
+    }
+    check("mutate: a run is appended to the history", histRow ? histRow.score : null, 66.7);
   }
 
   // 风险建议器：排序要讲道理（闸门文件 > 文档），且永远不能把建议变成失败。
@@ -2514,6 +2524,12 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     rgit(["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "base"]);
     fs.appendFileSync(path.join(rdir, "lib", "p2.js"), "module.exports = 2;\n");
     fs.appendFileSync(path.join(rdir, "README.md"), "more\n");
+    fs.mkdirSync(path.join(rdir, ".signoff"), { recursive: true });
+    fs.writeFileSync(
+      path.join(rdir, ".signoff", "mutants.json"),
+      JSON.stringify({ gate: "mutate", files: { "lib/p2.js": { total: 8, killed: 5, score: 62.5, survivors: 3 } } }) + "\n",
+      "utf8"
+    );
     const rk = run(["risk", "--json"], rdir);
     let rkj = null;
     try {
@@ -2525,6 +2541,7 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     check("risk: it never turns a suggestion into a failure", rk.status, 0);
     check("risk: every point carries a reason", rkj && rkj.files[0].reasons.length > 0 ? 1 : 0, 1);
     check("risk: the payload says it is advisory", rkj && rkj.advisory, true);
+    check("risk: a measured mutation score shows on the file", rkj && rkj.files[0].mutation && rkj.files[0].mutation.score, 62.5, JSON.stringify(rkj && rkj.files[0].mutation));
   }
 
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);

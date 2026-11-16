@@ -75,7 +75,7 @@ function candidates(file) {
 }
 
 function parseArgs(argv) {
-  const a = { files: null, dir: "lib", cmd: "node test/smoke.js", max: 30, offset: 0, timeout: 120000, min: null, list: false, json: false };
+  const a = { files: null, dir: "lib", cmd: "node test/smoke.js", max: 30, offset: 0, timeout: 120000, min: null, list: false, json: false, noRisk: false };
   for (let i = 0; i < argv.length; i++) {
     const t = String(argv[i]);
     const eq = t.indexOf("=");
@@ -91,11 +91,59 @@ function parseArgs(argv) {
     else if (key === "min") a.min = Number(next());
     else if (key === "list") a.list = true;
     else if (key === "json") a.json = true;
+    else if (key === "no-risk") a.noRisk = true;
     else if (t === "-h" || key === "help") a.help = true;
     else if (t.startsWith("-")) a.error = "unknown option: " + t;
     else a.error = "unexpected argument: " + t;
   }
   return a;
+}
+
+// A1：变异测试消费 signoff risk 的排序，并把每次结果累积成趋势。
+const RISK = path.join(ROOT, ".signoff", "risk.json");
+const MUTANTS = path.join(ROOT, ".signoff", "mutants.json");
+const HISTORY = path.join(ROOT, ".signoff", "mutants-history.jsonl");
+
+function readJson(p) {
+  try {
+    return JSON.parse(fs.readFileSync(p, "utf8"));
+  } catch (e) {
+    return null;
+  }
+}
+
+function loadRiskMap() {
+  const j = readJson(RISK);
+  const m = new Map();
+  for (const f of (j && j.files) || []) m.set(f.path, f.score);
+  return m;
+}
+
+function previousFiles() {
+  const j = readJson(MUTANTS);
+  return (j && j.files) || {};
+}
+
+function appendHistory(row) {
+  try {
+    fs.mkdirSync(path.dirname(HISTORY), { recursive: true });
+    fs.appendFileSync(HISTORY, JSON.stringify(row) + "\n");
+  } catch (e) {
+    /* 趋势丢了不影响这次判定 */
+  }
+}
+
+function recentScores(limit) {
+  try {
+    return fs
+      .readFileSync(HISTORY, "utf8")
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .slice(-limit)
+      .map((l) => JSON.parse(l).score);
+  } catch (e) {
+    return [];
+  }
 }
 
 function main() {
@@ -115,13 +163,21 @@ function main() {
   }
 
   const files = a.files ? a.files.map((f) => path.resolve(ROOT, f)) : walk(path.resolve(ROOT, a.dir), []);
-  const pools = [];
+  const rel = (f) => path.relative(ROOT, f).split(path.sep).join("/");
   for (const f of files) {
     if (!fs.existsSync(f)) {
       process.stderr.write("mutate: no such file: " + f + "\n");
       return 2;
     }
-    pools.push(...candidates(f).map((c) => ({ ...c, file: path.relative(ROOT, c.file).split(path.sep).join("/") })));
+  }
+  // A1：先跑风险高的文件。顺序会改变结果（--max 只取前 N 个），所以顺序必须打印出来、可关掉。
+  const riskMap = a.noRisk ? new Map() : loadRiskMap();
+  const ordered = files.slice().sort((x, y) => (riskMap.get(rel(y)) || 0) - (riskMap.get(rel(x)) || 0));
+  const order = ordered.map((f) => ({ file: rel(f), risk: riskMap.get(rel(f)) || 0 }));
+  const orderNote = riskMap.size ? order.map((o) => `${o.file}(risk ${o.risk})`).join(" > ") : "file order (no .signoff/risk.json)";
+  const pools = [];
+  for (const f of ordered) {
+    pools.push(...candidates(f).map((c) => ({ ...c, file: rel(c.file) })));
   }
   if (!pools.length) {
     process.stdout.write("[mutate] SKIPPED no mutation sites in " + (a.files ? a.files.join(", ") : a.dir) + "\n");
@@ -181,21 +237,48 @@ function main() {
   }
   restore();
 
+  if (!a.json && !a.list) process.stdout.write(`[mutate] order: ${orderNote}\n`);
+
   const killed = results.filter((r) => r.killed).length;
   const survived = results.length - killed;
   const score = results.length ? Math.round((killed / results.length) * 1000) / 10 : 0;
-  const payload = { gate: "mutate", cmd: a.cmd, total: results.length, killed, survived, score, equivalentExcluded: equivalent, survivors: results.filter((r) => !r.killed) };
+  const curFiles = {};
+  for (const r of results) {
+    const f = (curFiles[r.file] = curFiles[r.file] || { total: 0, killed: 0, survivors: 0 });
+    f.total += 1;
+    if (r.killed) f.killed += 1;
+    else f.survivors += 1;
+  }
+  for (const f of Object.values(curFiles)) f.score = Math.round((f.killed / f.total) * 1000) / 10;
+  const at = new Date().toISOString();
+  const payload = {
+    gate: "mutate",
+    at,
+    cmd: a.cmd,
+    total: results.length,
+    killed,
+    survived,
+    score,
+    equivalentExcluded: equivalent,
+    order,
+    files: { ...previousFiles(), ...curFiles },
+    survivors: results.filter((r) => !r.killed),
+  };
   try {
-    fs.mkdirSync(path.join(ROOT, ".signoff"), { recursive: true });
-    fs.writeFileSync(path.join(ROOT, ".signoff", "mutants.json"), JSON.stringify(payload, null, 2) + "\n", "utf8");
+    fs.mkdirSync(path.dirname(MUTANTS), { recursive: true });
+    fs.writeFileSync(MUTANTS, JSON.stringify(payload, null, 2) + "\n", "utf8");
   } catch (e) {
     /* 写不进就算了，报告还在 stdout */
   }
+  appendHistory({ at, cmd: a.cmd, total: results.length, killed, score, files: curFiles });
+  const recent = recentScores(3);
+  const trendNote = recent.length >= 2 ? recent.join("% → ") + "%" : recent.length === 1 ? recent[0] + "%" : "no history yet";
   if (a.json) {
-    process.stdout.write(JSON.stringify(payload) + "\n");
+    process.stdout.write(JSON.stringify({ ...payload, trend: recent }) + "\n");
   } else {
     for (const s of payload.survivors) process.stdout.write(`[mutate] survivor ${s.file}:${s.line} ${s.op}  ${s.before}\n`);
     process.stdout.write(`[mutate] ${results.length} mutants: ${killed} killed, ${survived} survived (${score}%)  cmd=${a.cmd}  equivalent excluded=${equivalent}\n`);
+    process.stdout.write(`[mutate] trend (last ${recent.length} runs): ${trendNote}\n`);
   }
   if (a.min !== null && score < a.min) {
     process.stderr.write(`mutate: score ${score}% is below --min ${a.min}%\n`);
