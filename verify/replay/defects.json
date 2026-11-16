@@ -1,0 +1,65 @@
+{
+  "note": "历史缺陷回放集：每一条都是本仓库真实逃逸过的缺陷。runner 会按 patch 把缺陷放回去，再跑 probe——probe 必须变红，否则说明这条缺陷又能悄悄通过了。",
+  "defects": [
+    {
+      "id": "p2-zero-apps-looks-pass",
+      "date": "2026-11-15",
+      "symptom": "没有 apps 配置时 p2 打印 PASS、ok:true，等于「没东西可判」被写成「通过」",
+      "file": "lib/p2.js",
+      "patch": {
+        "find": "const skipped = rows.length ? null : \"no apps\";",
+        "replace": "const skipped = null;"
+      },
+      "probe": {
+        "type": "run",
+        "cmd": "node verify/replay/p2-noapps.js",
+        "expectContains": "skipped=no apps"
+      }
+    },
+    {
+      "id": "cov-missing-looks-passed",
+      "date": "2026-11-15",
+      "symptom": "没有覆盖率数据时 cov 打印 PASS（因为 all 固定加了 --allow-missing）",
+      "file": "lib/cov.js",
+      "patch": {
+        "find": "a.allowMissing ? \"SKIPPED\" : \"FAIL\"",
+        "replace": "a.allowMissing ? \"PASS\" : \"FAIL\""
+      },
+      "probe": {
+        "type": "run",
+        "cmd": "node bin/signoff.js cov --allow-missing --diff",
+        "expectContains": "[cov] SKIPPED"
+      }
+    },
+    {
+      "id": "release-post-counts-skip-as-pass",
+      "date": "2026-11-15",
+      "symptom": "release --post 没有 GITHUB_TOKEN 时，把没读到的 GitHub 文本记成 ok，汇总行算成 PASS",
+      "file": "lib/release.js",
+      "patch": {
+        "find": "addSkip(\"surface-encoding\"",
+        "replace": "add(\"surface-encoding\", true,"
+      },
+      "probe": {
+        "type": "source",
+        "file": "lib/release.js",
+        "expect": "addSkip\\(\"surface-encoding\""
+      }
+    },
+    {
+      "id": "ci-installs-an-old-cli",
+      "date": "2026-11-15",
+      "symptom": "CI 用已发布旧版本（4.7.1）判本仓库，新语义永远测不到",
+      "file": ".github/workflows/signoff.yml",
+      "patch": {
+        "find": "npm i -g --silent --ignore-scripts .",
+        "replace": "npm i -g --silent signoff-cli@4.7.1"
+      },
+      "probe": {
+        "type": "source",
+        "file": ".github/workflows/signoff.yml",
+        "expect": "ignore-scripts \\."
+      }
+    }
+  ]
+}

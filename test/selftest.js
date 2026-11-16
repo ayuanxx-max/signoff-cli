@@ -2475,6 +2475,20 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
       encoding: "utf8",
     });
     check("mutate: --list finds real sites in a gate file", /lib\/p2\.js:\d+/.test(String(listed.stdout)), true);
+    // 缺陷回放：把 4 条真实逃逸过的缺陷放回去，现在的检查必须当场变红。
+    const rr = spawnSync(process.execPath, [path.join(__dirname, "..", "tools", "replay.js"), "--json"], {
+      env: gitEnv(),
+      cwd: path.join(__dirname, ".."),
+      encoding: "utf8",
+      timeout: 240000,
+    });
+    let rj = null;
+    try {
+      rj = JSON.parse(String(rr.stdout).trim().split(/\r?\n/).pop());
+    } catch (e) {
+      rj = null;
+    }
+    check("replay: every historical defect is caught when reintroduced", rj ? rj.reproduced : null, rj ? rj.total : -1, JSON.stringify(rj && rj.defects));
   }
 
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);

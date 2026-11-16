@@ -61,7 +61,8 @@
     "arch": "node tools/arch-health.mjs",
     "mutate": "node tools/mutate.js",
     "postinstall": "node bin/signoff.js ensure --from-install --quiet",
-    "typecheck": "tsc -p jsconfig.json"
+    "typecheck": "tsc -p jsconfig.json",
+    "replay": "node tools/replay.js"
   },
   "repository": {
     "type": "git",

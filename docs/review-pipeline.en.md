@@ -104,5 +104,5 @@ Levers for cost, largest first: **cut steps** (45 → 25 saves about 44%), **kee
 | risk grading → decides L3 strength | discipline (human judgement) |
 | diff size cap | discipline (to become a check) |
 | mutation testing | tool in place (`node tools/mutate.js`: change one operator, run the criterion, always restore), baseline score not measured yet |
-| defect replay set | not implemented |
+| defect replay set | in place (`node tools/replay.js`): four historical defects, each must go red as soon as it is put back |
 | defect density / escape rate metrics | not implemented |
