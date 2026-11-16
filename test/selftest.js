@@ -678,6 +678,13 @@ function main() {
     // 变异测试给出的 5 个存活点都落在 p2 的参数解析分支上，补两条最便宜的：--help 与未知选项。
     check("p2: --help prints usage", /usage: signoff p2/.test(run(["p2", "--help"], srepo).stdout), true);
     check("p2: an unknown option is a usage error", run(["p2", "--nope"], srepo).status, 2);
+    // 变异测试在 lib/p2.js:215/226 找到的漏洞：`--key=value` 与「bool 带值」两条分支没人测。
+    const inline = run(["p2", "--min-scenario=0", "--json"], srepo);
+    check("p2: --key=value is accepted, not read as an option name", /unrecognized arguments/.test(inline.stdout + inline.stderr) ? 1 : 0, 0, inline.stdout + inline.stderr);
+    const boolWithVal = run(["p2", "--strict=1"], srepo);
+    check("p2: a boolean flag with a value is rejected", boolWithVal.status === 2 && /ignored explicit argument '1'/.test(boolWithVal.stderr + boolWithVal.stdout) ? 1 : 0, 1, boolWithVal.stderr);
+    const p2json = run(["p2", "--json"], srepo);
+    check("p2: --json keeps python's comma-space separators", /^\{"gate": "p2", "ok": /.test(p2json.stdout), true, p2json.stdout.slice(0, 40));
     r = g(["hook", "pre-commit"]);
     check("guard hook pass", r.status, 0);
     const markerAfterPass = JSON.parse(fs.readFileSync(path.join(repo, ".signoff", "passed"), "utf8"));
@@ -2478,6 +2485,7 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
       encoding: "utf8",
     });
     check("mutate: --list finds real sites in a gate file", /lib\/p2\.js:\d+/.test(String(listed.stdout)), true);
+    check("mutate: equivalent mutants stay out of the denominator", /equivalent excluded/.test(String(listed.stdout)), true);
     // 缺陷回放：把 4 条真实逃逸过的缺陷放回去，现在的检查必须当场变红。
     const rr = spawnSync(process.execPath, [path.join(__dirname, "..", "tools", "replay.js"), "--json"], {
       env: gitEnv(),

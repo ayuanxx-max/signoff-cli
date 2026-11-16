@@ -14,6 +14,17 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const ROOT = path.join(__dirname, "..");
+const IGNORE = path.join(ROOT, "verify", "mutate", "ignore.json");
+
+// 等价变异不进分母：改了行为不变的东西，杀掉它只证明测试在跟着实现走。
+function loadIgnore() {
+  try {
+    const j = JSON.parse(fs.readFileSync(IGNORE, "utf8"));
+    return new Set((j.equivalent || []).map((e) => e.file + ":" + e.line));
+  } catch (e) {
+    return new Set();
+  }
+}
 
 // 一行只改一个位置，且只改这些「几乎不可能等价」的东西。
 const OPS = [
@@ -116,10 +127,21 @@ function main() {
     process.stdout.write("[mutate] SKIPPED no mutation sites in " + (a.files ? a.files.join(", ") : a.dir) + "\n");
     return 0;
   }
-  const picked = pools.slice(Math.max(0, a.offset || 0), Math.max(0, a.offset || 0) + a.max);
+  const ignored = loadIgnore();
+  let equivalent = 0;
+  const live = pools.filter((m) => {
+    if (!ignored.has(m.file + ":" + m.line)) return true;
+    equivalent += 1;
+    return false;
+  });
+  if (!live.length) {
+    process.stdout.write("[mutate] SKIPPED every site in " + (a.files ? a.files.join(", ") : a.dir) + " is an equivalent mutant\n");
+    return 0;
+  }
+  const picked = live.slice(Math.max(0, a.offset || 0), Math.max(0, a.offset || 0) + a.max);
   if (a.list) {
     for (const m of picked) process.stdout.write(`${m.file}:${m.line}  ${m.op}  ${m.before}\n`);
-    process.stdout.write(`[mutate] ${picked.length} mutants listed of ${pools.length} sites\n`);
+    process.stdout.write(`[mutate] ${picked.length} mutants listed of ${live.length} live sites (${equivalent} equivalent excluded)\n`);
     return 0;
   }
 
@@ -162,7 +184,7 @@ function main() {
   const killed = results.filter((r) => r.killed).length;
   const survived = results.length - killed;
   const score = results.length ? Math.round((killed / results.length) * 1000) / 10 : 0;
-  const payload = { gate: "mutate", cmd: a.cmd, total: results.length, killed, survived, score, survivors: results.filter((r) => !r.killed) };
+  const payload = { gate: "mutate", cmd: a.cmd, total: results.length, killed, survived, score, equivalentExcluded: equivalent, survivors: results.filter((r) => !r.killed) };
   try {
     fs.mkdirSync(path.join(ROOT, ".signoff"), { recursive: true });
     fs.writeFileSync(path.join(ROOT, ".signoff", "mutants.json"), JSON.stringify(payload, null, 2) + "\n", "utf8");
@@ -173,7 +195,7 @@ function main() {
     process.stdout.write(JSON.stringify(payload) + "\n");
   } else {
     for (const s of payload.survivors) process.stdout.write(`[mutate] survivor ${s.file}:${s.line} ${s.op}  ${s.before}\n`);
-    process.stdout.write(`[mutate] ${results.length} mutants: ${killed} killed, ${survived} survived (${score}%)  cmd=${a.cmd}\n`);
+    process.stdout.write(`[mutate] ${results.length} mutants: ${killed} killed, ${survived} survived (${score}%)  cmd=${a.cmd}  equivalent excluded=${equivalent}\n`);
   }
   if (a.min !== null && score < a.min) {
     process.stderr.write(`mutate: score ${score}% is below --min ${a.min}%\n`);

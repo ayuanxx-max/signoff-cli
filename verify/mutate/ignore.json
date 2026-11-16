@@ -1,0 +1,29 @@
+{
+  "note": "等价变异（equivalent mutants）：改完行为逐字不变，杀掉它没有意义，记分时必须排除。每一条都要写清理由，理由要能被别人复核；不写理由的不许进来。",
+  "equivalent": [
+    {
+      "file": "lib/p2.js",
+      "line": 19,
+      "reason": "EOL = process.platform === \"win32\" ? \"\\r\\n\" : \"\\n\"：process.platform 是常量，Windows 上另一分支不可达，翻转 === 得到的字节完全相同",
+      "date": "2026-11-15"
+    },
+    {
+      "file": "lib/p2.js",
+      "line": 74,
+      "reason": "pad: len >= width ? s : s + \" \".repeat(width - len)：len === width 时 repeat(0) 是空串，改成 > 得到的字符串逐字相同",
+      "date": "2026-11-15"
+    },
+    {
+      "file": "lib/p2.js",
+      "line": 85,
+      "reason": "nameCmp 的 ka：与 line 19 同源，Windows 上恒走 toLowerCase 那支，翻转 === 不可观测",
+      "date": "2026-11-15"
+    },
+    {
+      "file": "lib/p2.js",
+      "line": 86,
+      "reason": "nameCmp 的 kb：同 line 85",
+      "date": "2026-11-15"
+    }
+  ]
+}
