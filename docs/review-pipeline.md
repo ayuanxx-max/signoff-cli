@@ -103,7 +103,8 @@ L3 的边际价值在「断言写得出来」的地方最低，在「断言写�
 | 可选 pre-push 评审检查 | 已是机制（`review_on_push`） |
 | 风险分级 → 决定 L3 强度 | 纪律（人工判断） |
 | diff 体积上限 | 纪律（待写成检查） |
-| 变异测试 | 工具已就位（`node tools/mutate.js`）。同一抽样窗（`lib/p2.js:201–225`，8 个变异体）：补断言前 3 个被杀（37.5%），补后 4 个（50%）；另有 4 个等价变异登记在 `verify/mutate/ignore.json`，不进分母。剩余存活点：`--help` 分支、`tok !== "-"` 的两个方向。跑前读 `.signoff/risk.json` 排序（`--no-risk` 可关），每次结果追加到 `.signoff/mutants-history.jsonl` |
-| 风险建议器 | 已实现（`signoff risk`）：按规则给每个改动文件打分并给理由，读 `.signoff/mutants.json` 的存活点与该文件的变异分（表里直接显示 `mutation 5/8 killed (62.5%)`），永远 exit 0、永不改判定 |
+| 变异测试 | 工具已就位（`node tools/mutate.js`）。参数解析窗（`lib/p2.js:201–227`，8 个变异体）实测 7/8，补上最后一条文案断言后 8/8；早期抽样窗 `:201–225` 从 37.5% 提到 50% 再提到 87.5%。等价变异 6 条登记在 `verify/mutate/ignore.json`，不进分母（每条都写理由，`:210` 那条是实测 4 个输入逐字同输出）。跑前读 `.signoff/risk.json` 排序（`--no-risk` 可关），每次结果追加到 `.signoff/mutants-history.jsonl` |
+| 风险建议器 | 已实现（`signoff risk`）：按规则给每个改动文件打分并给理由，读 `.signoff/mutants.json` 的存活点与该文件的变异分（表里直接显示 `mutation 5/8 killed (62.5%)`），永远 exit 0、永不改判定。`tools/`、`verify/` 记 +4（「测量面」：它坏了所有分数都不可信，比闸门本身更该先看） |
+| 报告页的「审查手段本身」 | 已实现（`signoff report`）：回放缺陷条数、变异分趋势、最弱文件表，数字全部现算自 `verify/replay/defects.json` 与 `.signoff/mutants-history.jsonl`，不估不编 |
 | 缺陷回放集 | 已就位（`node tools/replay.js`）：4 条历史缺陷，放回去必须当场变红 |
 | 缺陷密度 / escape rate 指标 | 未实现 |

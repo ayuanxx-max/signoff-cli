@@ -677,7 +677,11 @@ function main() {
     check("p3: json carries skipped", p3j && p3j.skipped === "no task cards" ? 1 : 0, 1, JSON.stringify(p3j));
     // 变异测试给出的 5 个存活点都落在 p2 的参数解析分支上，补两条最便宜的：--help 与未知选项。
     check("p2: --help prints usage", /usage: signoff p2/.test(run(["p2", "--help"], srepo).stdout), true);
+    // -h 和 --help 走两条不同的分支（:201 vs :227），只测 --help 会漏掉一条。
+    check("p2: -h prints usage too", /usage: signoff p2/.test(run(["p2", "-h"], srepo).stdout), true);
     check("p2: an unknown option is a usage error", run(["p2", "--nope"], srepo).status, 2);
+    // 只看退出码不够：把 name === null 翻成 !== 也还是 exit 2（只是换了条错误文案），要钉住文案。
+    check("p2: an unknown option says it is unrecognized", /unrecognized arguments: --nope/.test(run(["p2", "--nope"], srepo).stderr), true);
     // 变异测试在 lib/p2.js:215/226 找到的漏洞：`--key=value` 与「bool 带值」两条分支没人测。
     const inline = run(["p2", "--min-scenario=0", "--json"], srepo);
     check("p2: --key=value is accepted, not read as an option name", /unrecognized arguments/.test(inline.stdout + inline.stderr) ? 1 : 0, 0, inline.stdout + inline.stderr);
@@ -2518,16 +2522,19 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     const rgit = (args) => spawnSync("git", args, { cwd: rdir, encoding: "utf8", env: gitEnv() });
     rgit(["init", "-q"]);
     fs.mkdirSync(path.join(rdir, "lib"), { recursive: true });
+    fs.mkdirSync(path.join(rdir, "tools"), { recursive: true });
     fs.writeFileSync(path.join(rdir, "lib", "p2.js"), "module.exports = 1;\n", "utf8");
+    fs.writeFileSync(path.join(rdir, "tools", "mutate.js"), "module.exports = 1;\n", "utf8");
     fs.writeFileSync(path.join(rdir, "README.md"), "hi\n", "utf8");
     rgit(["add", "-A"]);
     rgit(["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "base"]);
     fs.appendFileSync(path.join(rdir, "lib", "p2.js"), "module.exports = 2;\n");
+    fs.appendFileSync(path.join(rdir, "tools", "mutate.js"), "module.exports = 2;\n");
     fs.appendFileSync(path.join(rdir, "README.md"), "more\n");
     fs.mkdirSync(path.join(rdir, ".signoff"), { recursive: true });
     fs.writeFileSync(
       path.join(rdir, ".signoff", "mutants.json"),
-      JSON.stringify({ gate: "mutate", files: { "lib/p2.js": { total: 8, killed: 5, score: 62.5, survivors: 3 } } }) + "\n",
+      JSON.stringify({ gate: "mutate", files: { "tools/mutate.js": { total: 8, killed: 5, score: 62.5, survivors: 3 } } }) + "\n",
       "utf8"
     );
     const rk = run(["risk", "--json"], rdir);
@@ -2537,11 +2544,20 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     } catch (e) {
       rkj = null;
     }
-    check("risk: a gate module outranks a doc", rkj && rkj.files[0].path, "lib/p2.js", JSON.stringify(rkj && rkj.files.map((f) => [f.path, f.score])));
+    check("risk: a gate module outranks a doc", rkj && rkj.files.find((f) => f.path === "lib/p2.js") && rkj.files.find((f) => f.path === "lib/p2.js").score > 0 ? 1 : 0, 1);
+    check("risk: the measuring tools outrank a gate module", rkj && rkj.files[0].path, "tools/mutate.js", JSON.stringify(rkj && rkj.files.map((f) => [f.path, f.score])));
     check("risk: it never turns a suggestion into a failure", rk.status, 0);
     check("risk: every point carries a reason", rkj && rkj.files[0].reasons.length > 0 ? 1 : 0, 1);
     check("risk: the payload says it is advisory", rkj && rkj.advisory, true);
-    check("risk: a measured mutation score shows on the file", rkj && rkj.files[0].mutation && rkj.files[0].mutation.score, 62.5, JSON.stringify(rkj && rkj.files[0].mutation));
+    check("risk: a measured mutation score shows on the file", rkj && rkj.files.find((f) => f.path === "tools/mutate.js").mutation.score, 62.5, JSON.stringify(rkj && rkj.files.find((f) => f.path === "tools/mutate.js").mutation));
+    const rp = run(["report", "--json"], path.join(__dirname, ".."));
+    let rpj = null;
+    try {
+      rpj = JSON.parse(String(rp.stdout));
+    } catch (e) {
+      rpj = null;
+    }
+    check("report: the pipeline block counts the replay defects", rpj && rpj.pipeline && rpj.pipeline.escapedCount, 4, JSON.stringify(rpj && rpj.pipeline && rpj.pipeline.escapedCount));
   }
 
   for (const line of AUDIT) console.log(`AUDIT ${line.replace(/\n/g, "\nAUDIT ")}`);

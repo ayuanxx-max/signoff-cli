@@ -24,6 +24,12 @@
       "line": 86,
       "reason": "nameCmp 的 kb：同 line 85",
       "date": "2026-11-15"
+    },
+    {
+      "file": "lib/p2.js",
+      "line": 210,
+      "reason": "if (tok.startsWith(\"-\") && tok !== \"-\")：'-' 无论走这支还是走后面的 extra 路径，都以同一条 unrecognized arguments 文案 exit 2；2026-11-15 实测两个方向（ne->eq / and->or）在 4 个输入下输出逐字相同",
+      "date": "2026-11-15"
     }
   ]
 }
