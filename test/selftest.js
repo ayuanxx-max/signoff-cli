@@ -1224,6 +1224,90 @@ function main() {
       check("cov: a single added line counts as one judged line", hunkJson.total, 1);
       check("cov: a single added uncovered line is not reported as nothing to judge", hunkJson.skipped, null);
 
+      // 阶段 3：三种覆盖率格式都要读得出来。原来只测了 lcov，另外两条读取分支整段没有断言。
+      const tryJson = (s) => {
+        try {
+          return JSON.parse(s);
+        } catch (e) {
+          return null;
+        }
+      };
+      const pyRepo = fresh("covpy");
+      fs.writeFileSync(path.join(pyRepo, "p.js"), ["const a = 1;", "const b = 2;", "const c = 3;", "const d = 4;"].join("\n") + "\n", "utf8");
+      fs.writeFileSync(
+        path.join(pyRepo, "coverage.json"),
+        JSON.stringify({ files: { "p.js": { executed_lines: [1, 2], missing_lines: [3, 4], summary: {} } } }),
+        "utf8"
+      );
+      git(["add", "-A"], pyRepo, env);
+      git(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "base", "--no-verify"], pyRepo, env);
+      const pyJson = tryJson(run(["cov", "--json"], pyRepo, env).stdout);
+      check("cov: python's coverage.json is recognised", pyJson && pyJson.source, "coverage.json");
+      check("cov: python's executed and missing lines both count", pyJson && pyJson.pct, 50);
+      check("cov: python's file map is not read as istanbul", pyJson && pyJson.total, 4);
+
+      const istRepo = fresh("covist");
+      fs.writeFileSync(path.join(istRepo, "i.js"), ["const a = 1;", "const b = 2;", "const c = 3;"].join("\n") + "\n", "utf8");
+      fs.mkdirSync(path.join(istRepo, "coverage"), { recursive: true });
+      fs.writeFileSync(
+        path.join(istRepo, "coverage", "coverage-final.json"),
+        JSON.stringify({
+          "i.js": {
+            statementMap: { s0: { start: { line: 1 } }, s1: { start: null }, s2: { start: { line: 3 } } },
+            s: { s0: 1, s1: 1, s2: 0 },
+          },
+        }),
+        "utf8"
+      );
+      git(["add", "-A"], istRepo, env);
+      git(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "base", "--no-verify"], istRepo, env);
+      const istJson = tryJson(run(["cov", "--json"], istRepo, env).stdout);
+      check("cov: istanbul's statementMap is recognised", istJson && istJson.source, "coverage/coverage-final.json");
+      check("cov: istanbul counts a hit statement and a missed one", istJson && istJson.pct, 50);
+      check("cov: istanbul skips a statement without a start position", istJson && istJson.total, 2);
+
+      // 有序输出：同分时按文件名排，否则报告里的「最差文件」顺序会随输入变。
+      const sortRepo = fresh("covsort");
+      fs.writeFileSync(path.join(sortRepo, "a.js"), "const a = 1;\nconst b = 2;\n", "utf8");
+      fs.writeFileSync(path.join(sortRepo, "z.js"), "const z = 1;\nconst w = 2;\n", "utf8");
+      fs.mkdirSync(path.join(sortRepo, "coverage"), { recursive: true });
+      fs.writeFileSync(
+        path.join(sortRepo, "coverage", "lcov.info"),
+        ["SF:z.js", "DA:1,1", "DA:2,0", "end_of_record", "SF:a.js", "DA:1,1", "DA:2,0", "end_of_record", ""].join("\n"),
+        "utf8"
+      );
+      git(["add", "-A"], sortRepo, env);
+      git(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "base", "--no-verify"], sortRepo, env);
+      const sortOut = run(["cov", "--json"], sortRepo, env).stdout;
+      const sortText = run(["cov", "--min", "0"], sortRepo, env).stdout;
+      check("cov: equal scores are ordered by file name", sortText.indexOf("a.js") < sortText.indexOf("z.js") ? 1 : 0, 1, sortText.trim().split("\n")[0]);
+      check("cov: the json summary still reports both files", tryJson(sortOut) && tryJson(sortOut).pct, 50);
+
+      // 跳过通路：ok 必须是 true、skipped 必须写明是哪一种「没东西可判」。
+      const skipRepo = fresh("covskip");
+      fs.writeFileSync(path.join(skipRepo, "s.js"), "const s = 1;\n", "utf8");
+      git(["add", "-A"], skipRepo, env);
+      git(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "base", "--no-verify"], skipRepo, env);
+      const skipJson = tryJson(run(["cov", "--allow-missing", "--json"], skipRepo, env).stdout);
+      check("cov: an allowed-missing skip is not a failure", skipJson && skipJson.ok, true);
+      check("cov: the skip names the reason", skipJson && skipJson.skipped, "no coverage data");
+      const diffNothing = tryJson(run(["cov", "--diff", "--base", "HEAD", "--json"], covRepo, env).stdout);
+      check("cov: an empty diff names its own skip reason", diffNothing && diffNothing.skipped, "no instrumented lines in the diff");
+
+      // 判定对象变了不能还报 OK：改一行已被覆盖的代码，diff 模式必须真的去判它。
+      fs.writeFileSync(path.join(covRepo, "a.js"), lines.map((l, i) => (i === 1 ? "const v2 = 200;" : l)).join("\n") + "\n", "utf8");
+      git(["add", "a.js"], covRepo, env);
+      const diffHit = tryJson(run(["cov", "--diff", "--base", "HEAD", "--min", "0", "--json"], covRepo, env).stdout);
+      check("cov: a changed covered line is judged, not skipped", diffHit && diffHit.total, 1);
+
+      // 参数面：帮助、坏数字、单独的短横线。
+      const covHelp = run(["cov", "-h"], covRepo, env);
+      check("cov: -h prints usage", covHelp.status === 0 && /usage: signoff cov/.test(covHelp.stdout) ? 1 : 0, 1, covHelp.stdout.slice(0, 60));
+      const covBadMin = run(["cov", "--min", "abc"], covRepo, env);
+      check("cov: a non-numeric --min is a usage error", covBadMin.status, 2);
+      check("cov: the usage error says a number was expected", /expected a number/.test(covBadMin.stderr), true);
+      check("cov: a bare dash is not an unknown option", run(["cov", "-"], covRepo, env).status, 0);
+
       // 8. CI annotations: a finding becomes a line annotation, not a log paragraph.
       const ciRepo = fresh("ci");
       const ciFake = "AKIA" + "1234567890ABCDEF";
@@ -2499,6 +2583,11 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     const fixture = path.join(__dirname, "..", "verify", "fixtures", "mutate-sample.js");
     const before = fs.readFileSync(fixture, "utf8");
     const histFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "signoff-hist-")), "h.jsonl");
+    // 阶段 3：自检不得写仓库真实的测量记录。这条断言的存在理由有两次实测：
+    // 夹具先污染了历史文件（21 行 66.7%），又用 3 个点覆盖了 91 个点的基线。
+    const repoRec = [path.join(__dirname, "..", ".signoff", "mutants.json"), path.join(__dirname, "..", ".signoff", "mutants-history.jsonl")];
+    const snapRec = () => repoRec.map((p) => (fs.existsSync(p) ? fs.readFileSync(p, "utf8") : "absent")).join("\u0000");
+    const recBefore = snapRec();
     const mr = spawnSync(
       process.execPath,
       [
@@ -2522,6 +2611,8 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
       mj = null;
     }
     check("mutate: kills the mutants its tests can see", mj ? mj.killed : null, 2, JSON.stringify(mj));
+    check("mutate: the fixture run leaves the repository's own records alone", snapRec() === recBefore ? 1 : 0, 1);
+    check("mutate: the fixture run writes its report where it was told", fs.existsSync(path.join(path.dirname(histFile), "m.json")) ? 1 : 0, 1);
     check("mutate: reports a survivor no test covers", mj ? mj.survived : null, 1, JSON.stringify(mj));
     check("mutate: restores the source after the run", fs.readFileSync(fixture, "utf8") === before, true);
     const listed = spawnSync(process.execPath, [path.join(__dirname, "..", "tools", "mutate.js"), "--files", "lib/p2.js", "--list"], {
