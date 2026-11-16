@@ -2473,6 +2473,8 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
         "node verify/fixtures/mutate-sample.test.js",
         "--history",
         histFile,
+        "--out",
+        path.join(path.dirname(histFile), "m.json"),
         "--json",
       ],
       { env: gitEnv(), cwd: path.join(__dirname, ".."), encoding: "utf8" }
@@ -2528,16 +2530,18 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     fs.mkdirSync(path.join(rdir, "tools"), { recursive: true });
     fs.writeFileSync(path.join(rdir, "lib", "p2.js"), "module.exports = 1;\n", "utf8");
     fs.writeFileSync(path.join(rdir, "tools", "mutate.js"), "module.exports = 1;\n", "utf8");
+    fs.writeFileSync(path.join(rdir, "lib", "i18n.js"), "module.exports = 1;\n", "utf8");
     fs.writeFileSync(path.join(rdir, "README.md"), "hi\n", "utf8");
     rgit(["add", "-A"]);
     rgit(["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "base"]);
     fs.appendFileSync(path.join(rdir, "lib", "p2.js"), "module.exports = 2;\n");
     fs.appendFileSync(path.join(rdir, "tools", "mutate.js"), "module.exports = 2;\n");
+    fs.appendFileSync(path.join(rdir, "lib", "i18n.js"), "module.exports = 2;\n");
     fs.appendFileSync(path.join(rdir, "README.md"), "more\n");
     fs.mkdirSync(path.join(rdir, ".signoff"), { recursive: true });
     fs.writeFileSync(
       path.join(rdir, ".signoff", "mutants.json"),
-      JSON.stringify({ gate: "mutate", files: { "tools/mutate.js": { total: 8, killed: 5, score: 62.5, survivors: 3 } } }) + "\n",
+      JSON.stringify({ gate: "mutate", files: { "tools/mutate.js": { total: 8, killed: 5, score: 62.5, survivors: 3 }, "lib/i18n.js": { total: 19, killed: 9, score: 47.9, survivors: 10 } } }) + "\n",
       "utf8"
     );
     const rk = run(["risk", "--json"], rdir);
@@ -2553,6 +2557,12 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     check("risk: every point carries a reason", rkj && rkj.files[0].reasons.length > 0 ? 1 : 0, 1);
     check("risk: the payload says it is advisory", rkj && rkj.advisory, true);
     check("risk: a measured mutation score shows on the file", rkj && rkj.files.find((f) => f.path === "tools/mutate.js").mutation.score, 62.5, JSON.stringify(rkj && rkj.files.find((f) => f.path === "tools/mutate.js").mutation));
+    check(
+      "risk: a file measured below 60% costs extra",
+      rkj && rkj.files.find((f) => f.path === "lib/i18n.js") && rkj.files.find((f) => f.path === "lib/i18n.js").reasons.some((r) => r.id === "weak-measured-score") ? 1 : 0,
+      1,
+      JSON.stringify(rkj && rkj.files.map((f) => [f.path, f.score, f.reasons.map((r) => r.id)]))
+    );
     const rp = run(["report", "--json"], path.join(__dirname, ".."));
     let rpj = null;
     try {
