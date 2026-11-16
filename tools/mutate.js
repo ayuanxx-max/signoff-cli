@@ -20,7 +20,9 @@ const IGNORE = path.join(ROOT, "verify", "mutate", "ignore.json");
 function loadIgnore() {
   try {
     const j = JSON.parse(fs.readFileSync(IGNORE, "utf8"));
-    return new Set((j.equivalent || []).map((e) => e.file + ":" + e.line));
+    // 一行上可能有多个变异点，其中只有一个是等价的：带 op 的条目只排除那一个，
+    // 不带 op 的条目排除整行（老格式，保留兼容）。
+    return new Set((j.equivalent || []).map((e) => e.file + ":" + e.line + (e.op ? ":" + e.op : "")));
   } catch (e) {
     return new Set();
   }
@@ -190,7 +192,7 @@ function main() {
   const ignored = loadIgnore();
   let equivalent = 0;
   const live = pools.filter((m) => {
-    if (!ignored.has(m.file + ":" + m.line)) return true;
+    if (!ignored.has(m.file + ":" + m.line + ":" + m.op) && !ignored.has(m.file + ":" + m.line)) return true;
     equivalent += 1;
     return false;
   });

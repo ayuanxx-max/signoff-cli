@@ -1308,6 +1308,54 @@ function main() {
       check("cov: the usage error says a number was expected", /expected a number/.test(covBadMin.stderr), true);
       check("cov: a bare dash is not an unknown option", run(["cov", "-"], covRepo, env).status, 0);
 
+      // 基准选择：有 origin/main 就该用它，否则「算哪些改动」跟着本地 HEAD 漂。
+      const omRepo = fresh("covom");
+      fs.writeFileSync(path.join(omRepo, "o.js"), "const o1 = 1;\nconst o2 = 2;\n", "utf8");
+      fs.mkdirSync(path.join(omRepo, "coverage"), { recursive: true });
+      fs.writeFileSync(path.join(omRepo, "coverage", "lcov.info"), ["SF:o.js", "DA:1,1", "DA:2,0", "end_of_record", ""].join("\n"), "utf8");
+      git(["add", "-A"], omRepo, env);
+      git(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "base", "--no-verify"], omRepo, env);
+      git(["update-ref", "refs/remotes/origin/main", "HEAD"], omRepo, env);
+      // HEAD 再往前走一步：此时「相对 origin/main」与「相对 HEAD」能判的行数不同，
+      // 选错基准就会把这次改动判成「没有可判的行」。
+      fs.writeFileSync(path.join(omRepo, "o.js"), "const o1 = 11;\nconst o2 = 2;\n", "utf8");
+      git(["add", "o.js"], omRepo, env);
+      git(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "second", "--no-verify"], omRepo, env);
+      const omJson = tryJson(run(["cov", "--diff", "--min", "0", "--json"], omRepo, env).stdout);
+      check("cov: origin/main is the base when it exists", omJson && omJson.mode, "diff");
+      check("cov: the diff against origin/main judges the line HEAD already has", omJson && omJson.total, 1);
+
+      // 非 ASCII 文件名：git 默认给路径加引号转义，映射不到覆盖率里的原名。
+      const uniRepo = fresh("covuni");
+      fs.writeFileSync(path.join(uniRepo, "中文.js"), "const u1 = 1;\nconst u2 = 2;\n", "utf8");
+      fs.mkdirSync(path.join(uniRepo, "coverage"), { recursive: true });
+      fs.writeFileSync(path.join(uniRepo, "coverage", "lcov.info"), ["SF:中文.js", "DA:1,1", "DA:2,0", "end_of_record", ""].join("\n"), "utf8");
+      git(["add", "-A"], uniRepo, env);
+      git(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "base", "--no-verify"], uniRepo, env);
+      fs.writeFileSync(path.join(uniRepo, "中文.js"), "const u1 = 111;\nconst u2 = 2;\n", "utf8");
+      const uniJson = tryJson(run(["cov", "--diff", "--base", "HEAD", "--min", "0", "--json"], uniRepo, env).stdout);
+      check("cov: a non-ASCII path is not mangled by quoting", uniJson && uniJson.total, 1);
+
+      // app 发现：根目录靠 package.json，子目录两种来源都要认，隐藏目录要跳过。
+      const appRepo = fresh("p2apps");
+      fs.writeFileSync(path.join(appRepo, "package.json"), "{}\n", "utf8");
+      for (const rel of [["packages", "inner"], ["apps", "smokey"], ["apps", ".hidden"]]) {
+        const d = path.join(appRepo, rel[0], rel[1]);
+        fs.mkdirSync(d, { recursive: true });
+        fs.writeFileSync(path.join(d, "package.json"), "{}\n", "utf8");
+      }
+      fs.mkdirSync(path.join(appRepo, "packages", "inner", "verify", "scenarios"), { recursive: true });
+      fs.writeFileSync(path.join(appRepo, "packages", "inner", "verify", "scenarios", "s.json"), JSON.stringify({ checks: [{}, {}] }), "utf8");
+      fs.mkdirSync(path.join(appRepo, "apps", "harnessonly", "verify"), { recursive: true });
+      git(["add", "-A"], appRepo, env);
+      git(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "base", "--no-verify"], appRepo, env);
+      const appJson = tryJson(run(["p2", "--json"], appRepo, env).stdout);
+      const appTable = run(["p2"], appRepo, env).stdout;
+      check("p2: apps are found by package.json alone and by a verify dir", appJson && appJson.apps, 4);
+      check("p2: a dotted directory is not an app", /\.hidden/.test(appTable) ? 1 : 0, 0);
+      check("p2: only the app with scenarios counts as scenario level", appJson && appJson.scenarioApps, 1);
+      check("p2: assertions are summed across discovered apps", appJson && appJson.assertions, 2);
+
       // 8. CI annotations: a finding becomes a line annotation, not a log paragraph.
       const ciRepo = fresh("ci");
       const ciFake = "AKIA" + "1234567890ABCDEF";
@@ -2622,6 +2670,15 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     });
     check("mutate: --list finds real sites in a gate file", /lib\/p2\.js:\d+/.test(String(listed.stdout)), true);
     check("mutate: equivalent mutants stay out of the denominator", /equivalent excluded/.test(String(listed.stdout)), true);
+    // 同一行常有两个方向相反的变异，只有一个真是等价的：op 字段只排除那一个。
+    const covListed = String(
+      spawnSync(process.execPath, ["tools/mutate.js", "--files", "lib/cov.js", "--no-risk", "--max", "999", "--list"], {
+        cwd: path.join(__dirname, ".."),
+        encoding: "utf8",
+      }).stdout
+    );
+    check("mutate: an op-scoped equivalent excludes just that op", /\(2 equivalent excluded\)/.test(covListed) ? 1 : 0, 1);
+    check("mutate: the opposite op on the same line is still a live site", /lib\/cov\.js:126\s+eq->ne/.test(covListed) ? 1 : 0, 1);
     // 缺陷回放：把 4 条真实逃逸过的缺陷放回去，现在的检查必须当场变红。
     const rr = spawnSync(process.execPath, [path.join(__dirname, "..", "tools", "replay.js"), "--json"], {
       env: gitEnv(),
