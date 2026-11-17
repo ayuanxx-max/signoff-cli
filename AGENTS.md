@@ -24,6 +24,18 @@ signoff p5                # 文档口径扫描（会挡"绝对/必然"这类无�
 git add -A && git commit # 钩子会跑 p1（test:fast）+ secrets
 ```
 
+## 逃逸记账（阶段 3 目标 3）
+
+一次迭代 = master 上一个提交。任何一个「过了闸门、事后才发现」的缺陷，发现当时就记一条：
+
+```bash
+node tools/escapes.js add --defect "一句话说清漏了什么" --found-by "谁/哪个场景发现的" --gate p2
+node tools/escapes.js status     # 走了多少次、逃逸几条、按闸门的分布
+```
+
+`--gate` 填**本该拦住它的那道关**（p1…p5 / sec / cov / release），当时没有任何关覆盖就填 `none`。
+记录写进 `verify/escapes/log.jsonl`（进 git，要能追溯）；起点在 `verify/escapes/state.json`。
+
 ## 发布
 
 **发布口令（2026-11-11）：只有用户说出「发布 x.x.x」（带明确版本号）才走下面这条流程；其余说法一律只提交。**

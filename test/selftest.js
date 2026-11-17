@@ -2762,6 +2762,42 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
       1
     );
     check("mutate: the opposite op on the same line is still a live site", /lib\/cov\.js:126\s+eq->ne/.test(covListed) ? 1 : 0, 1);
+
+    // 逃逸记账（阶段 3 目标 3）：一次迭代 = 一个提交，记录要能追溯。
+    // 这个分片里没有 fresh()/git()/env 那些助手（它们在另一个分片），所以自带夹具。
+    const escRoot = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-esc-"));
+    const escGit = (args) => spawnSync("git", args, { cwd: escRoot, encoding: "utf8" });
+    const esc = (...args) =>
+      spawnSync(process.execPath, ["tools/escapes.js", ...args, "--root", escRoot], {
+        cwd: path.join(__dirname, ".."),
+        encoding: "utf8",
+      });
+    escGit(["init", "-q"]);
+    escGit(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-q", "--allow-empty", "-m", "base", "--no-verify"]);
+    check("escapes: status before a start point is an error", esc("status").status, 1);
+    check("escapes: start records the commit as iteration one", esc("start").status, 0);
+    check("escapes: add without --defect is a usage error", esc("add", "--found-by", "x").status, 2);
+    const escFirst = esc("add", "--defect", "d1", "--found-by", "reviewing a diff", "--gate", "p2", "--severity", "high");
+    check("escapes: a defect is recorded against the current iteration", escFirst.status, 0);
+    check(
+      "escapes: the recorded row names the gate that should have caught it",
+      /"gate":"p2"/.test(fs.readFileSync(path.join(escRoot, "verify", "escapes", "log.jsonl"), "utf8")),
+      true
+    );
+    // 第二个提交 = 第二次迭代
+    fs.writeFileSync(path.join(escRoot, "t.txt"), "x\n", "utf8");
+    escGit(["add", "-A"]);
+    escGit(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "second", "--no-verify"]);
+    esc("add", "--defect", "d2", "--found-by", "user report", "--gate", "none");
+    const escRaw = spawnSync(process.execPath, ["tools/escapes.js", "status", "--json", "--root", escRoot], {
+      cwd: path.join(__dirname, ".."),
+      encoding: "utf8",
+    });
+    const escStats = escRaw.status === 0 ? JSON.parse(escRaw.stdout) : null;
+    check("escapes: a commit counts as one iteration", escStats && escStats.iterations, 2);
+    check("escapes: two escapes are counted across two iterations", escStats && escStats.escapes, 2);
+    check("escapes: the gate that missed one is tallied", escStats && escStats.byGate && escStats.byGate.none, 1);
+    check("escapes: a bad gate name is a usage error", esc("add", "--defect", "d3", "--found-by", "x", "--gate", "p9").status, 2);
     // 缺陷回放：把 4 条真实逃逸过的缺陷放回去，现在的检查必须当场变红。
     const rr = spawnSync(process.execPath, [path.join(__dirname, "..", "tools", "replay.js"), "--json"], {
       env: gitEnv(),
