@@ -1405,6 +1405,32 @@ function main() {
       check("p2: only the app with scenarios counts as scenario level", appJson && appJson.scenarioApps, 1);
       check("p2: assertions are summed across discovered apps", appJson && appJson.assertions, 2);
 
+      // 场景文件不是对象时，报错里的类型名要和 Python 侧的说法一致（NoneType/str/bool）：
+      // 这三个类型名正是使用者拿去搜索错误原因的那几个词，写成 int 会把人引到错方向。
+      const p2TypeRepo = (name, body) => {
+        const d = fresh(name);
+        fs.writeFileSync(path.join(d, "package.json"), "{}\n", "utf8");
+        fs.mkdirSync(path.join(d, "verify", "scenarios"), { recursive: true });
+        fs.writeFileSync(path.join(d, "verify", "scenarios", "a.json"), body, "utf8");
+        return d;
+      };
+      const p2Types = [
+        ["p2nonetype", "null", "NoneType"],
+        ["p2strtype", '"text"', "str"],
+        ["p2booltype", "true", "bool"],
+      ].map(([name, body, want]) => {
+        const r = run(["p2"], p2TypeRepo(name, body), env);
+        return { want, status: r.status, err: r.stderr };
+      });
+      for (const t of p2Types) {
+        check(
+          `p2: a ${t.want} scenario is named ${t.want} in the error`,
+          new RegExp(`'${t.want}' object has no attribute 'get'`).test(t.err) ? 1 : 0,
+          1
+        );
+        check(`p2: a ${t.want} scenario stops the gate instead of passing`, t.status, 1);
+      }
+
       // 8. CI annotations: a finding becomes a line annotation, not a log paragraph.
       const ciRepo = fresh("ci");
       const ciFake = "AKIA" + "1234567890ABCDEF";
