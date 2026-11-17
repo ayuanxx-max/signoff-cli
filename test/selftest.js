@@ -1844,6 +1844,56 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       check("report: --mount --json does not swallow the flag", `${rep.parse(["--mount", "--json"]).mount}|${rep.parse(["--mount", "--json"]).json}`, "|true");
       check("report: --gate is lowercased", rep.parse(["--gate", "P2"]).gate, "p2");
       check("report: an unknown flag is an error, not a silent pass", /unknown flag/.test(rep.parse(["--nope"]).error || ""), true);
+
+      // 发布项：一个版本能不能发，取决于「版本 + CHANGELOG 本节 + 清单一致 + tag 之后没有未走闸的提交」。
+      // 这四件事任何一件漏判，都会让「缺 CHANGELOG」的仓库报绿。
+      // 夹具仓库要 `--no-verify`：本机全局装了 core.hooksPath，否则夹具提交会去跑本仓库的 p1。
+      {
+        const relBase = fs.mkdtempSync(path.join(os.tmpdir(), "signoff-release-"));
+        const relRepo = path.join(relBase, "repo");
+        const wr = (p, s) => {
+          fs.mkdirSync(path.dirname(path.join(relRepo, p)), { recursive: true });
+          fs.writeFileSync(path.join(relRepo, p), s);
+        };
+        const rg = (...a) => spawnSync("git", a, { cwd: relRepo, encoding: "utf8", windowsHide: true });
+        const relRow = () => (JSON.parse(run(["report", "--json"], relRepo).stdout).gates || []).find((x) => x.id === "release") || {};
+        try {
+          fs.mkdirSync(relRepo, { recursive: true });
+          rg("init", "-q");
+          rg("config", "user.email", "a@b.c");
+          rg("config", "user.name", "t");
+          wr("package.json", JSON.stringify({ name: "rel-probe", version: "1.2.3" }));
+          wr("CHANGELOG.md", "# log\n\n## v1.2.3\n\n- first\n");
+          rg("add", "-A");
+          rg("commit", "-qm", "1.2.3", "--no-verify");
+          rg("tag", "v1.2.3");
+          const good = relRow();
+          check("release: version + changelog section + tag is ready", good.ok, true, String(good.detail || "").slice(0, 120));
+          check("release: the healthy row names its tag", /tag ✓/.test(String(good.detail || "")), true);
+          // 缺本节 → 必须红。变异版把 `hasSection` 的 and 改成 or，这一步就绿了。
+          wr("CHANGELOG.md", "# log\n\n## 未发布\n\n- wip\n");
+          const noSection = relRow();
+          check("release: a missing changelog section blocks", noSection.ok, false);
+          check("release: the reason says the section is missing", /只有未发布节/.test(String(noSection.detail || "")), true);
+          wr("CHANGELOG.md", "# log\n\n## v1.2.3\n\n- first\n");
+          // 清单版本不一致 → 必须红。
+          wr("server.json", JSON.stringify({ version: "9.9.9" }));
+          check("release: a manifest version mismatch blocks", relRow().ok, false);
+          wr("server.json", JSON.stringify({ version: "1.2.3" }));
+          check("release: matching manifest versions are fine", relRow().ok, true);
+          // tag 之后又有提交 → 必须报出来（behind 是给人看「还差几个提交」的）。
+          wr("docs/x.md", "x\n");
+          rg("add", "-A");
+          rg("commit", "-qm", "after tag", "--no-verify");
+          check("release: commits after the tag are reported as unguarded", /之后 1 个提交/.test(String(relRow().detail || "")), true);
+        } finally {
+          try {
+            fs.rmSync(relBase, { recursive: true, force: true });
+          } catch (e) {
+            /* windows 上偶尔被句柄占住，留给临时目录自己清 */
+          }
+        }
+      }
       check(
         "report escapes the repo name",
         rep.renderHtml(Object.assign({}, parsed, { repoName: `<img src=x onerror=alert(1)>` })).includes("<img src=x"),

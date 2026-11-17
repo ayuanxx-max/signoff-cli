@@ -51,6 +51,34 @@
       "op": "or->and",
       "reason": "root = core.git([...], process.cwd()).out.trim() || process.cwd() ：只有 git 输出为空时才会分叉（非 git 目录）。此时 root 变成空串，但随后 load() 里的 path.join(\"\", rel) 仍是相对路径，existsSync 相对 process.cwd() 解析——而 run() 的 root 本来就取自 process.cwd()，所以读到同一个文件；writeJSON(\".signoff/cov.json\") 同理落到同一处。实测（.git/probe-equiv.js 的 cov:200 用例）：非 git 目录下两种实现 stdout/stderr/退出码/写出的 cov.json 逐字节相同。",
       "date": "2026-11-16"
+    },
+    {
+      "file": "lib/report.js",
+      "line": 206,
+      "op": "ne->eq",
+      "reason": "releaseGate 的 behind：`if (after.total) … else if (behind) …`。after.total 与 behind 数的是同一区间 tagCommit..HEAD 的提交数（commitsSinceTag 用 git log，behind 用 git rev-list --count），只要 behind > 0 就必然 after.total > 0，于是永远走前一支、behind 那一行永远不会输出。三种写法（ne->eq / and->or / or->and）都只影响这个不可达数与那一行死文案，页面上逐字相同。不删代码是因为删了会让刚发布的采样基线行号全部失配；登记为等价，等下次结构性改动一并清掉。",
+      "date": "2026-11-17"
+    },
+    {
+      "file": "lib/report.js",
+      "line": 206,
+      "op": "and->or",
+      "reason": "releaseGate 的 behind：`if (after.total) … else if (behind) …`。after.total 与 behind 数的是同一区间 tagCommit..HEAD 的提交数（commitsSinceTag 用 git log，behind 用 git rev-list --count），只要 behind > 0 就必然 after.total > 0，于是永远走前一支、behind 那一行永远不会输出。三种写法（ne->eq / and->or / or->and）都只影响这个不可达数与那一行死文案，页面上逐字相同。不删代码是因为删了会让刚发布的采样基线行号全部失配；登记为等价，等下次结构性改动一并清掉。",
+      "date": "2026-11-17"
+    },
+    {
+      "file": "lib/report.js",
+      "line": 206,
+      "op": "or->and",
+      "reason": "releaseGate 的 behind：`if (after.total) … else if (behind) …`。after.total 与 behind 数的是同一区间 tagCommit..HEAD 的提交数（commitsSinceTag 用 git log，behind 用 git rev-list --count），只要 behind > 0 就必然 after.total > 0，于是永远走前一支、behind 那一行永远不会输出。三种写法（ne->eq / and->or / or->and）都只影响这个不可达数与那一行死文案，页面上逐字相同。不删代码是因为删了会让刚发布的采样基线行号全部失配；登记为等价，等下次结构性改动一并清掉。",
+      "date": "2026-11-17"
+    },
+    {
+      "file": "lib/report.js",
+      "line": 205,
+      "op": "or->and",
+      "reason": "releaseGate 的 head 只被下一行的 behind 使用，而 behind 的输出分支被 after.total 遮蔽（见 :206 的三条同源记录）。改成 `sh(...) && \"\"` 只让 behind 恒为 0，页面上逐字相同。同一批清掉：head / behind 都随 behind 死分支一起没了。",
+      "date": "2026-11-17"
     }
   ]
 }
