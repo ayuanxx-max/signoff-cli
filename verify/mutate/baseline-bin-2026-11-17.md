@@ -1,49 +1,62 @@
 # `bin/signoff.js` 变异基线（2026-11-17）
 
-- 范围：`bin/signoff.js`，54 个活点，无等价排除
-- 结果：**30 杀 / 24 活 = 55.6%**
-- 怎么跑：两个 worktree 各一半（`--offset 0/27`），每个先验基线全绿（727 条自检）
-- 单点复算：`node tools/mutate.js --files bin/signoff.js --max 1 --offset N`
+- 范围：`bin/signoff.js`，**67 个活点**，无等价排除
+- 结果：**49 杀 / 18 活 = 73.1%**
+- 怎么跑：`node tools/mutate.js --files bin/signoff.js`，两个 worktree 各一半（34 + 33），
+  每个 worktree 先验基线 734 全绿再开跑，单点复算用 `node .git/verify-targets.js bin/signoff.js:<行>`
 
-## 为什么这么低
+## 两轮之间的分母为什么从 54 变成 67
 
-这个文件是 CLI 入口：它把退出码、闸门分派、缓存、失败兜底全串在一起，
-而现有测试几乎都是「跑一条命令、看 stdout/退出码」的端到端断言——
-**路径走过了，分支没被逼到**。变异版把 `if (sc !== 0) code = sc;` 取反，
-聚合退出码就永远停在 0：闸门红了，命令却报成功。这类点只有专门喂失败输入才会转红。
+第一轮（refactor 之前）54 个点、30 杀。但那一轮暴露了真正的问题：
+这个文件是脚本，`runGate`/`runSecrets`/`runAll`/`guard` 埋在 `process.exit` 链里，
+**「闸门红了命令却报绿」这类点一条测试都写不出来**。
 
-## 存活点（按危险程度）
+所以先做了注入式重构（`deps` 参数 + `main()` + `module.exports`），再重跑：
+文件多了 13 个新位点（`d.x || default`、`!d.noJs && …`、`main()` 包装），分母变大，
+分数线因此从 55.6% 变成 73.1% ——**不是因为改得更好，是因为原来测不到的东西现在被测了，
+而且新加的那 13 个点大部分当场就红**。
 
-| 行 | 变异 | 被改的是 | 危险度 |
-| --- | --- | --- | --- |
-| `:21` | `true->false` | `bootstrap").ensureRepo({ quiet: true });` | 低：提示文案、平台细节 |
-| `:22` | `and->or` | `if (r.installed && !process.argv.includes("--json"))` | 低：提示文案、平台细节 |
-| `:84` | `ge->gt` | `Requires Node >= 18 only; no Python. Options` | 低：提示文案、平台细节 |
-| `:88` | `eq->ne` | `PYTHON \|\| (process.platform === "win32" ? "python" : "` | 中：引擎与阈值选择 |
-| `:88` | `or->and` | `process.env.SIGNOFF_PYTHON \|\| (process.platform` | 中：引擎与阈值选择 |
-| `:97` | `and->or` | `SIGNOFF_ENGINE !== "python" && jsGate(name))` | 中：引擎与阈值选择 |
-| `:101` | `and->or` | ``signoff: ${name} failed: ${e && e.message}`);` | 低：提示文案、平台细节 |
-| `:115` | `eq->ne` | `const rc = r.status === null ? 1 : r.status;` | 高：退出码/缓存聚合，会让红变绿或反过来 |
-| `:118` | `eq->ne` | `if (rc === 0 && name === "p1") {` | 高：退出码/缓存聚合，会让红变绿或反过来 |
-| `:118` | `and->or` | `if (rc === 0 && name === "p1") {` | 高：退出码/缓存聚合，会让红变绿或反过来 |
-| `:128` | `and->or` | `integrity check skipped (${e && e.message})`);` | 低：提示文案、平台细节 |
-| `:141` | `true->false` | `windowsHide: true,` | 低：提示文案、平台细节 |
-| `:143` | `ne->eq` | `if (inside.status !== 0) return 0;` | 高：退出码/缓存聚合，会让红变绿或反过来 |
-| `:144` | `or->and` | `secrets.js").run(["--json"]) \|\| 0;` | 低：提示文案、平台细节 |
-| `:146` | `and->or` | ``signoff: secrets failed: ${e && e.message}`);` | 低：提示文案、平台细节 |
-| `:156` | `or->and` | `config.json"), "utf8")) \|\| {};` | 低：提示文案、平台细节 |
-| `:161` | `eq->ne` | `const covMin = typeof covCfg === "object" && covCfg` | 中：引擎与阈值选择 |
-| `:161` | `ne->eq` | `covCfg.min !== undefined ? covCfg.min : 80;` | 中：引擎与阈值选择 |
-| `:161` | `and->or` | `covCfg.min !== undefined ? covCfg.min : 80;` | 中：引擎与阈值选择 |
-| `:176` | `ne->eq` | `if (sc !== 0) code = sc;` | 高：退出码/缓存聚合，会让红变绿或反过来 |
-| `:180` | `ne->eq` | `if (c !== 0) code = c;` | 高：退出码/缓存聚合，会让红变绿或反过来 |
-| `:191` | `and->or` | `guard failed: ${e && e.message}`);` | 低：提示文案、平台细节 |
-| `:201` | `eq->ne` | `return r.status === null ? 1 : r.status;` | 高：退出码/缓存聚合，会让红变绿或反过来 |
-| `:242` | `and->or` | `audit failed: ${e && e.message}`);` | 低：提示文案、平台细节 |
+## 本轮销掉的 6 条
 
-## 已销（本轮）
+| 行 | 变异 | 之前会怎样 |
+| --- | --- | --- |
+| `-`(:206 旧) | `or->and` | 裸 `signoff` 不打印帮助，直接掉到未知命令 |
+| `:118` | `eq->ne` | 闸门被信号打死（status null）也算成功 |
+| `:149` | `ne->eq` | 非 git 目录里 secrets 从「跳过」变成「扫一遍」 |
+| `:187` | `ne->eq` | secrets 红了，`all` 仍报成功 |
+| `:191` | `ne->eq` | 任一闸门红了，`all` 仍报成功 |
+| `:214` | `eq->ne` | 兜底分支同理 |
 
-`:206`（帮助的四个条件用 `or` 连接）：把 `or` 改成 `and` 后，光敲 `signoff` 什么都不打印、
-直接掉到未知命令。**这是新人做的第一件事**，之前没有任何断言。补了四条：裸调用退出 0、
-裸调用打印同一份帮助、`help` 这个词、`-h`。
+全部逐个单点复测 KILLED。注意 `process.exit(null)` 就是 0——这几条的共同后果是**红变绿**。
+
+## 存活点（18 条）
+
+| 行 | 变异 | 类别 |
+| --- | --- | --- |
+| `:21` | `true->false` | 首次启动与引擎选择 |
+| `:22` | `and->or` | 首次启动与引擎选择 |
+| `:84` | `ge->gt` | 首次启动与引擎选择 |
+| `:88` | `eq->ne` | 首次启动与引擎选择 |
+| `:88` | `or->and` | 首次启动与引擎选择 |
+| `:103` | `and->or` | 防御性 catch：lib 自己抛异常才走到 |
+| `:121` | `eq->ne` | python 引擎下 p1 补判 integrity |
+| `:121` | `and->or` | python 引擎下 p1 补判 integrity |
+| `:131` | `and->or` | 防御性 catch：lib 自己抛异常才走到 |
+| `:147` | `true->false` | Windows 上隐藏控制台窗口 |
+| `:153` | `and->or` | 防御性 catch：lib 自己抛异常才走到 |
+| `:160` | `or->and` | 注入的默认值 / 配置回退 |
+| `:167` | `or->and` | 注入的默认值 / 配置回退 |
+| `:172` | `eq->ne` | `coverage.min` 缺省值 80 的三重判断 |
+| `:172` | `ne->eq` | `coverage.min` 缺省值 80 的三重判断 |
+| `:172` | `and->or` | `coverage.min` 缺省值 80 的三重判断 |
+| `:203` | `and->or` | 防御性 catch：lib 自己抛异常才走到 |
+| `:256` | `and->or` | 防御性 catch：lib 自己抛异常才走到 |
+
+**特意不销的两类**：
+
+1. `:203` / `:256`（外加 `:103` / `:131` / `:153`）是 catch 里的 `${e && e.message}`，
+   只有 `lib/guard.js`、`lib/audit.js` 自己抛异常才会走到。正常输入下到不了，
+   要测就得再开一个模块缝——为一句文案再加一层注入不划算，记录为「防御性分支」。
+2. `:147`（`windowsHide`）、`:84`（帮助里的版本说明）、`:88`（引擎名）属于平台与文案，
+   改了不影响任何判定结果。
 

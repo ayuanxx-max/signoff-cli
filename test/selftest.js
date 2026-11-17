@@ -2845,6 +2845,9 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
       binMod.guard("status", [], { noJs: true, spawn: () => ({ status: null }) }),
       1
     );
+    // :203 / :256 两个 `${e && e.message}` 在 catch 里，只有 lib/guard.js / lib/audit.js
+    // 自己抛异常才会走到。正常输入下它们根本到不了，硬测就得再开一个模块缝——不值。
+    // 留作「防御性分支」记录在基线文档里，不假装测过。
     // 缺陷回放：把 4 条真实逃逸过的缺陷放回去，现在的检查必须当场变红。
     const rr = spawnSync(process.execPath, [path.join(__dirname, "..", "tools", "replay.js"), "--json"], {
       env: gitEnv(),
