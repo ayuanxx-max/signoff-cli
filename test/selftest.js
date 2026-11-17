@@ -1266,6 +1266,29 @@ function main() {
       check("cov: istanbul counts a hit statement and a missed one", istJson && istJson.pct, 50);
       check("cov: istanbul skips a statement without a start position", istJson && istJson.total, 2);
 
+      // 条目本身不完整时（没有 s 计数、或者是 null）必须整条跳过：
+      // 取不到计数的行不能被当成「没覆盖」，否则一个不完整的文件会把分数拉下去。
+      const istBadRepo = fresh("covistbad");
+      fs.writeFileSync(path.join(istBadRepo, "g.js"), "const g = 1;\n", "utf8");
+      fs.mkdirSync(path.join(istBadRepo, "coverage"), { recursive: true });
+      fs.writeFileSync(
+        path.join(istBadRepo, "coverage", "coverage-final.json"),
+        JSON.stringify({
+          "g.js": { statementMap: { s0: { start: { line: 1 } } }, s: { s0: 1 } },
+          "nos.js": { statementMap: { s0: { start: { line: 1 } }, s1: { start: { line: 2 } } } },
+          "nil.js": null,
+        }),
+        "utf8"
+      );
+      git(["add", "-A"], istBadRepo, env);
+      git(["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "base", "--no-verify"], istBadRepo, env);
+      const istBadRun = run(["cov", "--json"], istBadRepo, env);
+      const istBad = tryJson(istBadRun.stdout);
+      check("cov: an entry without hit counts does not crash the reader", istBadRun.status, 0);
+      check("cov: an entry without hit counts is skipped, not counted as uncovered", istBad && istBad.total, 1);
+      check("cov: the incomplete file is not reported", istBad && istBad.files, 1);
+      check("cov: the complete file keeps its real percentage", istBad && istBad.pct, 100);
+
       // 有序输出：同分时按文件名排，否则报告里的「最差文件」顺序会随输入变。
       const sortRepo = fresh("covsort");
       fs.writeFileSync(path.join(sortRepo, "a.js"), "const a = 1;\nconst b = 2;\n", "utf8");
