@@ -53,7 +53,7 @@
 
 **留档而非留白**：这份清单本身就是产物。它们不是「没测到」，是「测了，且知道它们只影响可读性」。
 真正该担心的是另两个文件：`lib/report.js`（报告页）、
-`lib/i18n.js`（多语言）——它们**一个变异点都没建**。`bin/signoff.js` 已建成基线：
+`lib/i18n.js`（多语言）——它们**一个变异点都没建**。`lib/report.js` 已采样建基线：160/310 个点、56 杀 = 35%，见 [`verify/mutate/baseline-report-2026-11-17.md`](../verify/mutate/baseline-report-2026-11-17.md)。`bin/signoff.js` 已建成基线：
 67 个点 49 杀（73.1%），见 [`verify/mutate/baseline-bin-2026-11-17.md`](../verify/mutate/baseline-bin-2026-11-17.md)。
 
 三条实测结论（留档，免得下次又「怀疑等价」）：

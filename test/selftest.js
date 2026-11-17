@@ -1825,6 +1825,25 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
 
       const rep = require("../lib/report.js");
       check("report escapes html", rep.escapeHtml(`<b x="1">&'`), "&lt;b x=&quot;1&quot;&gt;&amp;&#39;");
+      // 参数解析是「用户要什么」的唯一入口：一个旗子被吞掉，就等于用户说了没人听。
+      check("report: --html asks for html", rep.parse(["--html"]).html, true);
+      // 单独 --html 会被「没指定就别静默」那条默认规则补回来，只有和 --json 一起才能分辨出
+      // `o.html = true` 有没有真的执行。
+      check("report: --html --json keeps html on", rep.parse(["--html", "--json"]).html, true);
+      check("report: --json alone does NOT also turn on html", rep.parse(["--json"]).html, false);
+      check("report: no flag defaults to html, not to silence", rep.parse([]).html, true);
+      check("report: --schema is accepted", rep.parse(["--schema"]).schema, true);
+      check("report: --open is accepted", rep.parse(["--open"]).open, true);
+      check("report: --days 0 is refused, not silently clamped", /--days/.test(rep.parse(["--days", "0"]).error || ""), true);
+      check("report: --limit 0 is refused", /--limit/.test(rep.parse(["--limit", "0"]).error || ""), true);
+      check("report: --limit=-3 is refused too (that form is parsed separately)", /--limit/.test(rep.parse(["--limit=-3"]).error || ""), true);
+      check("report: --days 7 is fine and kept", `${rep.parse(["--days", "7"]).days}|${rep.parse(["--days", "7"]).error}`, "7|undefined");
+      // --mount 可以不带值，但不能把后面的旗子当目录吃掉。
+      check("report: a bare --mount means the default place", rep.parse(["--mount"]).mount, "");
+      check("report: --mount docs takes the value", rep.parse(["--mount", "docs"]).mount, "docs");
+      check("report: --mount --json does not swallow the flag", `${rep.parse(["--mount", "--json"]).mount}|${rep.parse(["--mount", "--json"]).json}`, "|true");
+      check("report: --gate is lowercased", rep.parse(["--gate", "P2"]).gate, "p2");
+      check("report: an unknown flag is an error, not a silent pass", /unknown flag/.test(rep.parse(["--nope"]).error || ""), true);
       check(
         "report escapes the repo name",
         rep.renderHtml(Object.assign({}, parsed, { repoName: `<img src=x onerror=alert(1)>` })).includes("<img src=x"),
