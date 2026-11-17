@@ -2804,6 +2804,47 @@ check("MCP fix tool is preview-only", /case "signoff_fix":[\s\S]{0,600}"--check"
     check("escapes: two escapes are counted across two iterations", escStats && escStats.escapes, 2);
     check("escapes: the gate that missed one is tallied", escStats && escStats.byGate && escStats.byGate.none, 1);
     check("escapes: a bad gate name is a usage error", esc("add", "--defect", "d3", "--found-by", "x", "--gate", "p9").status, 2);
+
+    // 退出码聚合：闸门红了，命令必须红。假闸门比真弄坏一个闸门便宜，也不会互相污染。
+    const binMod = require(path.join(__dirname, "..", "bin", "signoff.js"));
+    const quiet = () => {};
+    check(
+      "all: a failing secrets gate makes the run red",
+      binMod.runAll([], { runSecrets: () => 3, runGate: () => 0, log: quiet }),
+      3
+    );
+    check(
+      "all: a failing gate makes the run red",
+      binMod.runAll([], { runSecrets: () => 0, runGate: (n) => (n === "p2" ? 2 : 0), log: quiet }),
+      2
+    );
+    check(
+      "all: a green run stays green",
+      binMod.runAll([], { runSecrets: () => 0, runGate: () => 0, log: quiet }),
+      0
+    );
+    // 非 git 目录里 secrets 是「跳过」，不是「扫了没问题」——两者不能混为一谈。
+    check(
+      "secrets: outside a git work tree it is skipped, not scanned",
+      binMod.runSecrets([], { insideGit: () => 1, scan: () => 5 }),
+      0
+    );
+    check(
+      "secrets: inside a git work tree the scanner result is returned",
+      binMod.runSecrets([], { insideGit: () => 0, scan: () => 5 }),
+      5
+    );
+    // spawn 成功、进程被信号打死时 status 是 null：这必须算失败，不能算成功。
+    check(
+      "runGate: a gate killed by a signal counts as failure",
+      binMod.runGate("p4", [], { engine: "python", spawn: () => ({ status: null }) }),
+      1
+    );
+    check(
+      "guard: a guard killed by a signal counts as failure",
+      binMod.guard("status", [], { noJs: true, spawn: () => ({ status: null }) }),
+      1
+    );
     // 缺陷回放：把 4 条真实逃逸过的缺陷放回去，现在的检查必须当场变红。
     const rr = spawnSync(process.execPath, [path.join(__dirname, "..", "tools", "replay.js"), "--json"], {
       env: gitEnv(),

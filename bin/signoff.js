@@ -93,8 +93,10 @@ function jsGate(name) {
   return fs.existsSync(file) ? file : null;
 }
 
-function runGate(name, args) {
-  if (process.env.SIGNOFF_ENGINE !== "python" && jsGate(name)) {
+function runGate(name, args, deps) {
+  const d = deps || {};
+  const engine = d.engine === undefined ? process.env.SIGNOFF_ENGINE : d.engine;
+  if (engine !== "python" && jsGate(name)) {
     try {
       return require(jsGate(name)).run(args) || 0;
     } catch (e) {
@@ -107,7 +109,8 @@ function runGate(name, args) {
     console.error(`signoff: missing gate script ${file}`);
     return 127;
   }
-  const r = spawnSync(python(), [file, ...args], { stdio: "inherit" });
+  const spawnGate = d.spawn || ((py, a) => spawnSync(py, a, { stdio: "inherit" }));
+  const r = spawnGate(python(), [file, ...args]);
   if (r.error) {
     console.error(`signoff: cannot start ${python()} (${r.error.message}). Set SIGNOFF_PYTHON.`);
     return 127;
@@ -133,22 +136,30 @@ function runGate(name, args) {
 
 // Secrets run first in `all`: an unstaged key is worth more than a style report,
 // and a non-git directory has nothing to scan (exit 2 from secrets is not a failure).
-function runSecrets(args) {
+function runSecrets(args, deps) {
+  const d = deps || {};
   try {
-    const inside = spawnSync("git", ["rev-parse", "--is-inside-work-tree"], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-      windowsHide: true,
-    });
+    const inside = d.insideGit
+      ? { status: d.insideGit() }
+      : spawnSync("git", ["rev-parse", "--is-inside-work-tree"], {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          windowsHide: true,
+        });
     if (inside.status !== 0) return 0;
-    return require("../lib/secrets.js").run(["--json"]) || 0;
+    const scan = d.scan || (() => require("../lib/secrets.js").run(["--json"]));
+    return scan() || 0;
   } catch (e) {
     console.error(`signoff: secrets failed: ${e && e.message}`);
     return 1;
   }
 }
 
-function runAll(args) {
+function runAll(args, deps) {
+  const d = deps || {};
+  const log = d.log || console.log;
+  const gate = d.runGate || runGate;
+  const secrets = d.runSecrets || runSecrets;
   // Coverage 是按数据选择加入的：仓库声明了 coverage.min 就严格判；没声明就显式跳过并说明，
   // 而不是固定塞一个 --allow-missing 让「没测」看起来像「达标」。
   let cfg = {};
@@ -160,7 +171,7 @@ function runAll(args) {
   const covCfg = cfg.coverage;
   const covMin = typeof covCfg === "object" && covCfg && covCfg.min !== undefined ? covCfg.min : 80;
   const covArgs = covCfg ? ["--diff", "--min", String(covMin)] : ["--allow-missing", "--diff"];
-  if (!covCfg) console.log("[all] cov: no coverage.min in .signoff/config.json — this gate is skipped, not passed");
+  if (!covCfg) log("[all] cov: no coverage.min in .signoff/config.json — this gate is skipped, not passed");
   const steps = [
     ["p1", args],
     ["p2", args],
@@ -171,20 +182,21 @@ function runAll(args) {
     ["cov", covArgs],
   ];
   let code = 0;
-  console.log("\n== signoff secrets ==");
-  const sc = runSecrets(args);
+  log("\n== signoff secrets ==");
+  const sc = secrets(args);
   if (sc !== 0) code = sc;
   for (const [name, a] of steps) {
-    console.log(`\n== signoff ${name} ==`);
-    const c = runGate(name, a);
+    log(`\n== signoff ${name} ==`);
+    const c = gate(name, a);
     if (c !== 0) code = c;
   }
   return code;
 }
 
-function guard(sub, args) {
+function guard(sub, args, deps) {
+  const d = deps || {};
   const file = path.join(__dirname, "..", "lib", "guard.js");
-  if (fs.existsSync(file)) {
+  if (!d.noJs && fs.existsSync(file)) {
     try {
       return require(file).main([sub, ...args]) || 0;
     } catch (e) {
@@ -193,7 +205,8 @@ function guard(sub, args) {
     }
   }
   const py = path.join(__dirname, "..", "gates", "guard.py");
-  const r = spawnSync(python(), [py, sub, ...args], { stdio: "inherit" });
+  const spawnGuard = d.spawn || ((pbin, a) => spawnSync(pbin, a, { stdio: "inherit" }));
+  const r = spawnGuard(python(), [py, sub, ...args]);
   if (r.error) {
     console.error(`signoff: cannot start ${python()} (${r.error.message}). Set SIGNOFF_PYTHON.`);
     return 127;
@@ -201,74 +214,81 @@ function guard(sub, args) {
   return r.status === null ? 1 : r.status;
 }
 
-const [cmd, ...rest] = process.argv.slice(2);
+function main() {
+  const [cmd, ...rest] = process.argv.slice(2);
 
-if (!cmd || cmd === "-h" || cmd === "--help" || cmd === "help") {
-  console.log(HELP);
-  process.exit(0);
-}
-if (cmd === "-v" || cmd === "--version" || cmd === "version") {
-  console.log(require("../package.json").version);
-  process.exit(0);
-}
-if (cmd === "doctor") process.exit(require("../lib/doctor").run(rest));
-if (cmd === "ensure") process.exit(require("../lib/bootstrap").run(rest));
-if (cmd === "all") {
-  maybeBootstrap("all");
-  process.exit(runAll(rest));
-}
-if (cmd === "init") process.exit(guard("init", rest));
-if (cmd === "guard") {
-  maybeBootstrap("guard");
-  process.exit(guard("guard", rest));
-}
-if (cmd === "hook") process.exit(guard("hook", rest));
-if (cmd === "status") process.exit(guard("status", rest));
-// Read-only by construction: `report` is deliberately absent from BOOTSTRAP_CMDS and
-// from the gate table, so looking at the state can never change it.
-if (cmd === "report") process.exit(require("../lib/report.js").run(rest));
-if (cmd === "uninstall") {
-  if (rest.includes("--global")) {
-    const r = require("../lib/bootstrap").uninstallGlobal();
-    console.log(r.removed ? `signoff: machine layer removed (${r.dir})` : "signoff: machine layer was not installed");
+  if (!cmd || cmd === "-h" || cmd === "--help" || cmd === "help") {
+    console.log(HELP);
     process.exit(0);
   }
-  process.exit(guard("uninstall", rest));
-}
-if (cmd === "audit") {
-  try {
-    process.exit(require(path.join(__dirname, "..", "lib", "audit.js")).run(rest) || 0);
-  } catch (e) {
-    console.error(`signoff: audit failed: ${e && e.message}`);
-    process.exit(1);
+  if (cmd === "-v" || cmd === "--version" || cmd === "version") {
+    console.log(require("../package.json").version);
+    process.exit(0);
   }
-}
-if (cmd === "release") {
-  require("../lib/release").main(rest).then(function (code) { process.exit(code); });
-  return;
-}
-if (cmd === "explain") process.exit(require("../lib/explain.js").run(rest));
-if (cmd === "cov") process.exit(require("../lib/cov.js").run(rest));
-if (cmd === "risk") process.exit(require("../lib/risk.js").main(rest));
-if (cmd === "secrets") {
-  maybeBootstrap("secrets");
-  process.exit(require("../lib/secrets.js").run(rest));
-}
-if (cmd === "mcp") {
-  // stdio JSON-RPC; the module wires stdin and stays alive until the client closes it.
-  require("../integrations/mcp/server.js");
-  return;
-}
-if (cmd === "fix") process.exit(require("../lib/fix.js").run(rest));
-if (cmd === "dispute") process.exit(require("../lib/dispute.js").run(rest));
-if (cmd === "review") process.exit(require("../lib/review.js").run(rest));
-if (cmd === "patterns") process.exit(require("../lib/patterns.js").run(rest));
-if (cmd === "tokens") process.exit(require("../lib/tokens.js").run(rest));
-if (GATES[cmd]) {
-  maybeBootstrap(cmd);
-  process.exit(runGate(cmd, rest));
+  if (cmd === "doctor") process.exit(require("../lib/doctor").run(rest));
+  if (cmd === "ensure") process.exit(require("../lib/bootstrap").run(rest));
+  if (cmd === "all") {
+    maybeBootstrap("all");
+    process.exit(runAll(rest));
+  }
+  if (cmd === "init") process.exit(guard("init", rest));
+  if (cmd === "guard") {
+    maybeBootstrap("guard");
+    process.exit(guard("guard", rest));
+  }
+  if (cmd === "hook") process.exit(guard("hook", rest));
+  if (cmd === "status") process.exit(guard("status", rest));
+  // Read-only by construction: `report` is deliberately absent from BOOTSTRAP_CMDS and
+  // from the gate table, so looking at the state can never change it.
+  if (cmd === "report") process.exit(require("../lib/report.js").run(rest));
+  if (cmd === "uninstall") {
+    if (rest.includes("--global")) {
+      const r = require("../lib/bootstrap").uninstallGlobal();
+      console.log(r.removed ? `signoff: machine layer removed (${r.dir})` : "signoff: machine layer was not installed");
+      process.exit(0);
+    }
+    process.exit(guard("uninstall", rest));
+  }
+  if (cmd === "audit") {
+    try {
+      process.exit(require(path.join(__dirname, "..", "lib", "audit.js")).run(rest) || 0);
+    } catch (e) {
+      console.error(`signoff: audit failed: ${e && e.message}`);
+      process.exit(1);
+    }
+  }
+  if (cmd === "release") {
+    require("../lib/release").main(rest).then(function (code) { process.exit(code); });
+    return;
+  }
+  if (cmd === "explain") process.exit(require("../lib/explain.js").run(rest));
+  if (cmd === "cov") process.exit(require("../lib/cov.js").run(rest));
+  if (cmd === "risk") process.exit(require("../lib/risk.js").main(rest));
+  if (cmd === "secrets") {
+    maybeBootstrap("secrets");
+    process.exit(require("../lib/secrets.js").run(rest));
+  }
+  if (cmd === "mcp") {
+    // stdio JSON-RPC; the module wires stdin and stays alive until the client closes it.
+    require("../integrations/mcp/server.js");
+    return;
+  }
+  if (cmd === "fix") process.exit(require("../lib/fix.js").run(rest));
+  if (cmd === "dispute") process.exit(require("../lib/dispute.js").run(rest));
+  if (cmd === "review") process.exit(require("../lib/review.js").run(rest));
+  if (cmd === "patterns") process.exit(require("../lib/patterns.js").run(rest));
+  if (cmd === "tokens") process.exit(require("../lib/tokens.js").run(rest));
+  if (GATES[cmd]) {
+    maybeBootstrap(cmd);
+    process.exit(runGate(cmd, rest));
+  }
+
+  console.error(`signoff: unknown command "${cmd}"\n`);
+  console.error(HELP);
+  process.exit(2);
+
 }
 
-console.error(`signoff: unknown command "${cmd}"\n`);
-console.error(HELP);
-process.exit(2);
+if (require.main === module) main();
+
+module.exports = { main, runAll, runSecrets, runGate, guard };
