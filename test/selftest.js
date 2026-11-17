@@ -897,6 +897,12 @@ function main() {
     const d = (args) => run(args, drepo, { SIGNOFF_HOME: dhome });
     check("--version prints a version", /^\d+\.\d+\.\d+$/.test(run(["--version"]).stdout.trim()) ? 1 : 0, 1);
     check("help carries the current name", /落印/.test(run(["--help"]).stdout) ? 1 : 0, 1);
+    // 光敲 `signoff` 是新人做的第一件事：不打印帮助就等于没有入口。
+    // （变异版把 help 的四个条件从 or 改成 and，无参数时一条都不成立，直接掉到未知命令。）
+    check("a bare signoff prints the help and exits 0", run([]).status, 0);
+    check("the bare help is the same text as --help", /落印/.test(run([]).stdout) ? 1 : 0, 1);
+    check("the word help works too, not just --help", run(["help"]).status, 0);
+    check("-h works too", run(["-h"]).status, 0);
     check("doctor unguarded repo", d(["doctor"]).status, 1);
     d(["init", "--no-ci"]);
     check("doctor guarded repo", d(["doctor"]).status, 0, d(["doctor", "--quiet"]).stdout.trim());
