@@ -29,6 +29,10 @@ const opt = (n, d) => {
 
 const DRY = flag("--dry-run");
 const WITH_CI = flag("--ci");
+// 默认把探测到的测试命令写进 config.json：不写的话 p1 永远 skip，接了等于没接闸。
+const LOCK_TEST = !flag("--no-lock-test");
+// --relock：已经接过、但 test_cmd 还是 null 的仓库，再跑一次 init --lock-test 补上。
+const RELOCK = flag("--relock");
 const DEPTH = Number(opt("--depth", "3")) || 3;
 const DEFAULTS = [path.join("E:", "DSH.Jack.01"), path.join("E:", "DSH.Jack.02"), path.join("E:", "Obsidian"), os.homedir()];
 const ROOTS = (opt("--roots", "") || DEFAULTS.join(";"))
@@ -86,8 +90,33 @@ for (const repo of repos) {
     rows.push({ repo, action: "not-a-repo", note: "半截 .git，git 会把它算进父仓库" });
     continue;
   }
-  if (wired(repo)) {
+  if (wired(repo) && !RELOCK) {
     rows.push({ repo, action: "already", note: "" });
+    continue;
+  }
+  if (wired(repo) && RELOCK) {
+    const cfgPath = path.join(repo, ".signoff", "config.json");
+    let cfg = {};
+    try {
+      cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+    } catch (e) {
+      cfg = {};
+    }
+    if (cfg.test_cmd) {
+      rows.push({ repo, action: "already", note: "test_cmd=" + cfg.test_cmd });
+      continue;
+    }
+    if (DRY) {
+      rows.push({ repo, action: "would-relock", note: "" });
+      continue;
+    }
+    const r = spawnSync(process.execPath, [CLI, "init", "--no-ci", "--lock-test"], { cwd: repo, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+    const after = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+    rows.push({
+      repo,
+      action: after.test_cmd ? "relocked" : "no-runner",
+      note: after.test_cmd || (r.status === 0 ? "什么都没探测到，p1 仍会 skip" : "init 失败"),
+    });
     continue;
   }
   const ci = WITH_CI && hasGithubRemote(repo);
@@ -95,7 +124,7 @@ for (const repo of repos) {
     rows.push({ repo, action: "would-init", note: ci ? "with ci" : "no ci" });
     continue;
   }
-  const argv = [CLI, "init"].concat(ci ? [] : ["--no-ci"]);
+  const argv = [CLI, "init"].concat(ci ? [] : ["--no-ci"]).concat(LOCK_TEST ? ["--lock-test"] : []);
   const r = spawnSync(process.execPath, argv, { cwd: repo, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
   const ok = r.status === 0 && wired(repo);
   const test = (r.stdout || "").match(/^\s+test\s{2,}(.+)$/m);
