@@ -3,7 +3,7 @@ window.__ModuleLoader__.load({
   factory(require) {
     const React = require("react");
     const h = React.createElement;
-    const { useEffect, useState, useCallback } = React;
+    const { useEffect, useLayoutEffect, useRef, useState, useCallback } = React;
 
     const API = "/signoff-board";
     const PANEL_KEY = "signoff-board";
@@ -48,6 +48,17 @@ const VERDICT = {
     };
 
     const styles = {
+      // 宿主给的面板高度是固定的，内容超过一屏就会被直接裁掉（看起来像「超出上下窗口」）。
+      // 所以自己当滚动容器：撑满可用高度，纵向滚动，滚动条常驻不抖动。
+      scroll: {
+        height: "100%",
+        minHeight: 0,
+        overflowY: "auto",
+        overflowX: "hidden",
+        overscrollBehavior: "contain",
+        scrollbarGutter: "stable",
+        scrollbarWidth: "thin",
+      },
       wrap: { padding: "18px 22px 40px", maxWidth: 980, margin: "0 auto", color: "inherit" },
       head: { display: "flex", alignItems: "baseline", gap: 12, marginBottom: 4 },
       title: { fontSize: 19, fontWeight: 650, letterSpacing: 0.2 },
@@ -249,6 +260,24 @@ const VERDICT = {
         return () => window.removeEventListener("focus", onFocus);
       }, [load]);
 
+      // 高度不能只靠 height:100%：宿主给 main 槽的高度有时是不确定的（auto），
+      // 那样 100% 会退化成内容高度，内容就顶出窗口而且没有滚动条。
+      // 所以量一次自己离视口顶部的距离，把 maxHeight 钉在剩下的可视高度上——
+      // 无论宿主上方有工具栏还是标签条，都不会超出窗口。
+      const boxRef = useRef(null);
+      useLayoutEffect(() => {
+        const fit = () => {
+          const el = boxRef.current;
+          if (!el) return;
+          const top = el.getBoundingClientRect().top;
+          const room = Math.max(240, Math.round(window.innerHeight - top - 10));
+          el.style.maxHeight = room + "px";
+        };
+        fit();
+        window.addEventListener("resize", fit);
+        return () => window.removeEventListener("resize", fit);
+      }, []);
+
       const open = (slug) => {
         fetch(API + "/open", {
           method: "POST",
@@ -258,7 +287,19 @@ const VERDICT = {
       };
 
       const repos = (data && data.repos) || [];
+      // 内联样式管不到 ::-webkit-scrollbar，滚动条外观只能靠这段 CSS。
+      // 只在面板根节点上生效（[data-signoff-scroll]），不污染宿主其它区域。
+      const scrollCss = [
+        "[data-signoff-scroll]::-webkit-scrollbar{width:11px}",
+        "[data-signoff-scroll]::-webkit-scrollbar-track{background:transparent}",
+        "[data-signoff-scroll]::-webkit-scrollbar-thumb{background:rgba(128,128,128,.42);border-radius:8px;border:3px solid transparent;background-clip:content-box}",
+        "[data-signoff-scroll]::-webkit-scrollbar-thumb:hover{background:rgba(128,128,128,.66);background-clip:content-box}",
+      ].join("");
       return h(
+        "div",
+        { style: styles.scroll, "data-signoff-scroll": "1" },
+        h("style", { key: "signoff-scroll-css" }, scrollCss),
+        h(
         "div",
         { style: styles.wrap },
         h(
@@ -287,6 +328,7 @@ const VERDICT = {
           "div",
           { style: Object.assign({}, styles.meta, { marginTop: 18 }) },
           M.ro,
+        ),
         ),
       );
     }

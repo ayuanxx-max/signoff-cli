@@ -43,6 +43,10 @@ function loadPanel(repo) {
       return [value, () => {}];
     },
     useEffect: () => {},
+    // 面板根节点用一个 ref 量视口高度：冒烟里没有真实 DOM，ref 给个空壳、
+    // layout effect 直接跳过（量高度是浏览器行为，不在这里判）。
+    useRef: () => ({ current: null }),
+    useLayoutEffect: () => {},
     useCallback: (fn) => fn,
   };
 

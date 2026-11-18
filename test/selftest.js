@@ -1780,6 +1780,20 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
     check("panel appends the cost after the pass rate", panelSrc.includes("t.cost > 0") && panelSrc.includes("money(t.cost)"), true);
     check("panel keeps sub-cent spend visible", panelSrc.includes("v < 0.01"), true);
     check("panel labels the amount", panelSrc.includes("M.cost") && panelSrc.includes("money(t.cost)"), true);
+    // 面板比一屏高时必须能自己滚动：宿主给的高度不确定，所以根节点既设 100%/auto，
+    // 又按视口实测 maxHeight；少了任何一半，内容都会顶出窗口且没有滚动条。
+    check(
+      "panel root is its own scroll container",
+      panelSrc.includes('"data-signoff-scroll": "1"') &&
+        panelSrc.includes("overflowY: \"auto\"") &&
+        panelSrc.includes("::-webkit-scrollbar-thumb"),
+      true,
+    );
+    check(
+      "panel clamps its height to the viewport",
+      panelSrc.includes("window.innerHeight - top") && panelSrc.includes('el.style.maxHeight = room + "px"'),
+      true,
+    );
     check("panel names the amount in both languages", panelSrc.includes('cost: "费用"') && panelSrc.includes('cost: "cost"'), true);
     {
       // 服务端拼行：report.json 里的 tokens/cost 必须原样出现在 taskRows 里，行里才有金额可显示。
