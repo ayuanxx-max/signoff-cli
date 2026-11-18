@@ -103,6 +103,11 @@ signoff report --html   # 一页只读看板（默认写 .signoff/report.html）
 
 逐步做法：[docs/integrations.md](docs/integrations.md)（English: [docs/integrations.en.md](docs/integrations.en.md)）。
 
+本机所有仓库一次接满：`node tools/wire-all.js`（`--dry-run` 先看会动谁）。它扫 `--roots` 下的每个 git 仓库，
+只对**还没接过**的仓库跑 `signoff init`，已接过的一行不碰。没接过的仓库提交时只有"轻守卫"
+（secrets + 测试，且不写 `Signoff-Pass` 尾注），所以看板上它们的提交会标成「未走闸」——
+接上之后才会留下判决记录。
+
 ---
 
 ## 5. 和谁比（一律匿名）
@@ -293,6 +298,11 @@ Platforms and thin shells: one core, several entry points — see [docs/SURFACES
 | MCP | `signoff mcp` serves the same gates over stdio |
 
 Step-by-step: [docs/integrations.en.md](docs/integrations.en.md) (中文: [docs/integrations.md](docs/integrations.md)).
+
+Wire every repository on this machine at once: `node tools/wire-all.js` (`--dry-run` first to see what it would touch).
+It scans each git repository under `--roots` and runs `signoff init` only for repositories that are **not wired yet**.
+An unwired repository only gets the light guard on commit (secrets + tests, no `Signoff-Pass` trailer), which is why
+the board marks its commits as "not gated"; wiring it is what makes the verdict leave a record.
 
 ---
 

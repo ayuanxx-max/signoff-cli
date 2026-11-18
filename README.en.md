@@ -109,6 +109,11 @@ Platforms and thin shells: one core, several entry points — see [docs/SURFACES
 
 Step-by-step: [docs/integrations.en.md](docs/integrations.en.md) (中文: [docs/integrations.md](docs/integrations.md)).
 
+Wire every repository on this machine at once: `node tools/wire-all.js` (`--dry-run` first to see what it would touch).
+It scans each git repository under `--roots` and runs `signoff init` only for repositories that are **not wired yet**.
+An unwired repository only gets the light guard on commit (secrets + tests, no `Signoff-Pass` trailer), which is why
+the board marks its commits as "not gated"; wiring it is what makes the verdict leave a record.
+
 ---
 
 ## 5. Versus the neighbours (always anonymous)
