@@ -1931,6 +1931,18 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
       check("--repos collects repositories", multi.multi, true);
       check("--repos keeps one entry", (multi.repos || []).length, 1);
       check("--repos entries carry a verdict", ["blocked", "ready", "unknown"].includes((multi.repos[0] || {}).verdict), true);
+      // 多仓页必须说人话：光有「谁挡着你」的表格，等于看不见别人下午做了什么。
+      run(["report", "--html", "--repos", repo], repo);
+      const multiHtml = fs.readFileSync(path.join(repo, ".signoff", "report.html"), "utf8");
+      check("--repos renders an activity feed", /ul class="feed"/.test(multiHtml), true);
+      check("--repos names the section in a human way", /最近谁在动|最近活动/.test(multiHtml), true);
+      const ev0 = ((multi.repos[0] || {}).events || [])[0] || {};
+      check(
+        "--repos feed carries this repo's latest commit",
+        !!ev0.subject && multiHtml.includes(rep.escapeHtml(ev0.subject)),
+        true,
+        String(ev0.subject || "(no events)").slice(0, 60)
+      );
 
       check("report -h exits 0", hd.status, 0);
       check("report -h names the flags", /--html/.test(hd.stdout) && /--task/.test(hd.stdout), true);
