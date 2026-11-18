@@ -15,6 +15,9 @@ const PASS = [];
 const FAIL = [];
 const AUDIT = [];
 let HOME = "";
+// 自检的仓库都是临时目录：默认不往用户的机器名册 ~/.signoff/machine.json 里登记。
+// 需要测名册的用例显式传 SIGNOFF_NO_REGISTRY=0 再打开。
+process.env.SIGNOFF_NO_REGISTRY = "1";
 
 // 可选计时：SIGNOFF_TIMING=1 时记录每条用例之间的真实间隔（用例本身是同步的，
 // 时间花在它自己 spawn 的东西上），结束后按耗时排出前 12 名——压时间先看数据。
@@ -1943,6 +1946,52 @@ check("release gate exports main", typeof require(path.join(__dirname, "..", "li
         true,
         String(ev0.subject || "(no events)").slice(0, 60)
       );
+
+      // 机器名册：接过的仓库不用指目录，也要能出现在 --all 的看板上
+      // （这块自带 git 仓库，因为 shard-b 里没有 shard-a 的 buildRepo/git 辅助函数）
+      const regB = fs.mkdtempSync(path.join(fs.mkdtempSync(path.join(require("os").tmpdir(), "machine-")), "b-"));
+      const sh = (args, cwd) => require("child_process").spawnSync(args[0], args.slice(1), { cwd, encoding: "utf8" });
+      fs.mkdirSync(path.join(regB, "docs"), { recursive: true });
+      fs.writeFileSync(path.join(regB, "README.md"), "# b\n", "utf8");
+      fs.writeFileSync(path.join(regB, "package.json"), JSON.stringify({ name: "reg-b", version: "0.0.0" }, null, 2), "utf8");
+      sh(["git", "init", "-q"], regB);
+      sh(["git", "-c", "user.email=a@b.c", "-c", "user.name=t", "add", "-A"], regB);
+      sh(["git", "-c", "user.email=a@b.c", "-c", "user.name=t", "commit", "-qm", "b", "--no-verify"], regB);
+      // 名册写进这块自带的 HOME，绝不碰用户真实的 ~/.signoff/machine.json
+      const regHome = fs.mkdtempSync(path.join(require("os").tmpdir(), "machine-home-"));
+      run(["init", "--no-ci", "--quiet"], regB, { SIGNOFF_HOME: regHome, SIGNOFF_NO_REGISTRY: "0" });
+      check("--all has a machine registry", fs.existsSync(path.join(regHome, "machine.json")), true);
+      const allRes = run(["report", "--all", "--json"], repo, { SIGNOFF_HOME: regHome });
+      check("--all exits 0", allRes.status, 0, (allRes.stderr || "").slice(0, 80));
+      const allJson = JSON.parse(allRes.stdout);
+      check("--all renders the machine board", allJson.multi, true);
+      const real = (q) => {
+        try {
+          return fs.realpathSync.native(q).toLowerCase();
+        } catch (e) {
+          return String(q).toLowerCase();
+        }
+      };
+      const allRoots = (allJson.repos || []).map((r) => real(String(r.root || "")));
+      check(
+        "--all includes a repo other than the one it ran in",
+        allRoots.includes(real(regB)),
+        true,
+        `${allRoots.length} repos on the board`
+      );
+      check("--all is documented in -h", /--all/.test(rep.USAGE), true);
+      const mach = require("../lib/machine");
+      // 进程内这一句要真的写名册：临时 HOME + 打开开关，写完恢复。
+      const keepHome = process.env.SIGNOFF_HOME;
+      process.env.SIGNOFF_HOME = regHome;
+      process.env.SIGNOFF_NO_REGISTRY = "0";
+      mach.register(regB, { verdict: "blocked", failed: ["p1"] });
+      const ment = mach.list().find((x) => real(x.root) === real(regB)) || {};
+      process.env.SIGNOFF_NO_REGISTRY = "1";
+      if (keepHome === undefined) delete process.env.SIGNOFF_HOME;
+      else process.env.SIGNOFF_HOME = keepHome;
+      check("machine: register keeps the verdict", ment.verdict, "blocked");
+      check("machine: register keeps what failed", JSON.stringify(ment.failed), JSON.stringify(["p1"]));
 
       check("report -h exits 0", hd.status, 0);
       check("report -h names the flags", /--html/.test(hd.stdout) && /--task/.test(hd.stdout), true);

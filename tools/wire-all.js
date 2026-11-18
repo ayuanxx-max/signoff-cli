@@ -82,6 +82,14 @@ function hasGithubRemote(repo) {
 }
 
 const CLI = path.join(__dirname, "..", "bin", "signoff.js");
+// 已接的仓库也要进名册，否则 report --all 只看得见刚 init 过的那几个。
+function noteMachine(repo) {
+  try {
+    require("../lib/machine").register(repo, { verdict: "unknown" });
+  } catch (e) {
+    /* best effort */
+  }
+}
 const repos = [...new Set(ROOTS.flatMap((r) => findRepos(r, DEPTH)))].filter((p) => !norm(p).startsWith(norm(os.homedir()) + "/appdata")).sort();
 
 const rows = [];
@@ -91,6 +99,7 @@ for (const repo of repos) {
     continue;
   }
   if (wired(repo) && !RELOCK) {
+    noteMachine(repo);
     rows.push({ repo, action: "already", note: "" });
     continue;
   }
@@ -103,6 +112,7 @@ for (const repo of repos) {
       cfg = {};
     }
     if (cfg.test_cmd) {
+      noteMachine(repo);
       rows.push({ repo, action: "already", note: "test_cmd=" + cfg.test_cmd });
       continue;
     }
@@ -139,6 +149,6 @@ const pad = (s, n) => String(s) + " ".repeat(Math.max(0, n - String(s).length));
 for (const r of rows) console.log(`${pad(r.action, 11)} ${r.repo}${r.note ? "  ·  " + r.note : ""}`);
 const count = (a) => rows.filter((r) => r.action === a).length;
 console.log(
-  `\n${rows.length} repos: wired=${count("wired")} already=${count("already")} not-a-repo=${count("not-a-repo")} failed=${count("FAILED")} would=${count("would-init")}${DRY ? "  (dry run)" : ""}`
+  `\n${rows.length} repos: wired=${count("wired")} relocked=${count("relocked")} no-runner=${count("no-runner")} already=${count("already")} not-a-repo=${count("not-a-repo")} failed=${count("FAILED")} would=${count("would-init")}${DRY ? "  (dry run)" : ""}`
 );
 process.exit(count("FAILED") ? 1 : 0);

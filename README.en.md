@@ -114,6 +114,11 @@ It scans each git repository under `--roots` and runs `signoff init` only for re
 An unwired repository only gets the light guard on commit (secrets + tests, no `Signoff-Pass` trailer), which is why
 the board marks its commits as "not gated"; wiring it is what makes the verdict leave a record.
 
+Every repository on the machine on one page: `signoff report --all --html --mount`; the index lands in
+`~/.signoff/reports/index.html`. `--all` reads the machine registry `~/.signoff/machine.json` — written once by
+`init` and again after every guard run — so a repository appears by itself after its first signoff run, with no
+list to maintain (contract C13).
+
 ---
 
 ## 5. Versus the neighbours (always anonymous)

@@ -108,6 +108,10 @@ signoff report --html   # 一页只读看板（默认写 .signoff/report.html）
 （secrets + 测试，且不写 `Signoff-Pass` 尾注），所以看板上它们的提交会标成「未走闸」——
 接上之后才会留下判决记录。
 
+全机所有仓库一页看：`signoff report --all --html --mount`，索引落在 `~/.signoff/reports/index.html`。
+`--all` 读的是机器级名册 `~/.signoff/machine.json`——`init` 装完登记一次、每次 guard 跑完再登记一次，
+所以新仓库只要用过一次 signoff 就会自己出现在看板上，不需要谁去维护清单（契约 C13）。
+
 ---
 
 ## 5. 和谁比（一律匿名）
@@ -303,6 +307,11 @@ Wire every repository on this machine at once: `node tools/wire-all.js` (`--dry-
 It scans each git repository under `--roots` and runs `signoff init` only for repositories that are **not wired yet**.
 An unwired repository only gets the light guard on commit (secrets + tests, no `Signoff-Pass` trailer), which is why
 the board marks its commits as "not gated"; wiring it is what makes the verdict leave a record.
+
+Every repository on the machine on one page: `signoff report --all --html --mount`; the index lands in
+`~/.signoff/reports/index.html`. `--all` reads the machine registry `~/.signoff/machine.json` — written once by
+`init` and again after every guard run — so a repository appears by itself after its first signoff run, with no
+list to maintain (contract C13).
 
 ---
 
